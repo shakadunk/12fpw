@@ -4,9 +4,9 @@ Replaces the old Mailchimp-based plan. The site and the email come from the same
 Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailchimp archive).
 
 ## Status
-- DONE (demo): black site with SCROLL, GRID and CALENDAR views, post pages, signup form (not connected), light/dark toggle, `scripts/add-post.mjs` to make a post from 12 images + text. Demo posts reuse 12 sample images; delete them before launch.
-- TO BUILD: private upload page, email rendering, sending via Resend, signup endpoint, backfill of the old posts, moving 12fpw.com to Vercel.
-- BLOCKER: Claude's GitHub connection could not see shakadunk/12fpw, so nothing has been pushed yet. The repo needs to be added under the Claude GitHub app's repository access.
+- DONE (demo, live on Vercel at 12fpw.vercel.app): black site with SCROLL, GRID and CALENDAR views, post pages, signup form (not connected), light/dark toggle, slim VIEW/TOP bar in the archive, `scripts/add-post.mjs` to make a post from 12 images + text. Demo posts reuse 12 sample images; delete them before launch.
+- WORKFLOW: Shaka describes a change, Claude confirms details, edits, tests, and pushes to the GitHub repo; Vercel redeploys automatically. Claude can push to shakadunk/12fpw (the Claude GitHub App is installed on the repo).
+- TO BUILD: backfill of the old posts, private upload page, email rendering, sending via Resend, signup endpoint, moving 12fpw.com to Vercel.
 
 ## Old template (from Week 3 and Week 4)
 - White background, one centered column about 600px wide, Helvetica/Arial.
@@ -46,14 +46,15 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 
 ## Archive backfill (about 60 posts)
 - Week 1 was in 2024, and posts ran through the first few weeks of 2025.
-- The Mailchimp archive pages block automated readers. Method that works: Safari "Print as PDF" on each archive page, then a script pulls the text and the 12 images from each PDF (tested on Week 3: text and images extract cleanly). Extracted images are the emailed size (about 750px wide), so original files are better where they exist.
+- Plan: Shaka has the original images grouped by week in Adobe Bridge. He uploads zips (about 8 to 10 weeks each; start with a batch of 3 or 4) with one folder per week named `<year>-w<NN>`, 12 images numbered in order, a `text.txt`, and an optional `hero.txt` holding the hero image number. Claude processes each batch with `scripts/add-post.mjs`, pushes, and the site fills in.
+- Fallback: the Mailchimp archive pages block automated readers, but Safari "Print as PDF" works: a script can pull the text and the 12 images from each PDF (tested on Week 3). Extracted images are only the emailed size (about 750px wide), so originals are better.
 - PDFs say "Week N" but not the year. Posts were weekly from Week 1 of 2024, so year plus week determines the date. Ask about any skipped weeks.
 - Old Mailchimp links will break once 12fpw.com moves; that is accepted as long as the posts are in the new archive.
 
 ## Technical notes
 - Uploads must go straight to storage, not through a serverless function: Vercel's per-request size limit (about 4.5 MB, to verify) is too small for 12 photos.
 - Source of truth is the GitHub repo (issues/<year>-w<week>/); Vercel redeploys on push. If the portal needs to publish without a git push, fall back to Vercel Blob with the site reading from it.
-- The portal and sending code need npm packages; build and test them with Claude Code on Shaka's Mac. The cloud sandbox cannot reach the npm registry.
+- Shaka does not want to install Claude (Claude Code) on his work computer, so everything must run in the browser and on Vercel. The cloud sandbox cannot reach the npm registry, so the portal and sending code should use only what Node already includes, or be built so Vercel installs any packages at deploy time.
 - Repo size: about 2 MB per post after resizing, so 60 posts is roughly 120 MB. Commit only resized images.
 
 ## Archive slim bar (added 2026-10-26)
