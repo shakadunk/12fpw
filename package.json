@@ -1,0 +1,16 @@
+{
+  "name": "12fpw",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "12 Frames Per Week: static site with Scroll / Grid / Calendar archive. Posts live in issues/<year>-w<week>/.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs && node scripts/serve.mjs",
+    "add-post": "node scripts/add-post.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.0"
+  }
+}

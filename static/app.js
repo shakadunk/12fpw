@@ -1,0 +1,105 @@
+// Theme toggle, archive views (Scroll / Grid / Calendar), infinite scroll, signup form. No dependencies.
+(function () {
+  var root = document.documentElement;
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+
+  // ----- theme -----
+  var themeBtn = document.getElementById('theme-toggle');
+  function syncTheme() {
+    var dark = root.dataset.theme !== 'light';
+    if (themeBtn) themeBtn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#000000' : '#ffffff');
+  }
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+      store.set('theme', root.dataset.theme);
+      syncTheme();
+    });
+  }
+  syncTheme();
+
+  // ----- archive views + infinite scroll -----
+  var viewBtns = document.querySelectorAll('.view-toggle [data-view]');
+  var list = document.getElementById('scroll-list');
+  var manifestEl = document.getElementById('manifest');
+  var statusEl = document.getElementById('scroll-status');
+  var endEl = document.getElementById('scroll-end');
+  var urls = [];
+  try { urls = manifestEl ? JSON.parse(manifestEl.textContent) : []; } catch (e) {}
+  var next = list ? Number(list.getAttribute('data-loaded')) || 0 : 0;
+  var loading = false, failedAt = 0;
+
+  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+  function nearEnd() { return endEl && endEl.getBoundingClientRect().top < window.innerHeight + 1600; }
+
+  function loadMore() {
+    if (!list || loading || root.dataset.view !== 'scroll') return;
+    if (next >= urls.length) { setStatus(urls.length ? 'End of archive' : ''); return; }
+    if (Date.now() - failedAt < 3000) return;
+    loading = true;
+    setStatus('Loading');
+    fetch(urls[next])
+      .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.text(); })
+      .then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var post = doc.querySelector('article.post');
+        if (post) {
+          var h1 = post.querySelector('h1');
+          if (h1) { var h2 = document.createElement('h2'); h2.className = h1.className; h2.innerHTML = h1.innerHTML; h1.replaceWith(h2); }
+          list.appendChild(document.importNode(post, true));
+        }
+        next++;
+        loading = false;
+        setStatus(next >= urls.length ? 'End of archive' : '');
+        if (nearEnd()) loadMore();
+      })
+      .catch(function () { loading = false; failedAt = Date.now(); setStatus('Could not load more. Keep scrolling to retry.'); });
+  }
+  function check() { if (root.dataset.view === 'scroll' && nearEnd()) loadMore(); }
+
+  function syncView() {
+    var v = root.dataset.view;
+    viewBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === v)); });
+    check();
+  }
+  viewBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      root.dataset.view = b.dataset.view;
+      store.set('archiveView', b.dataset.view);
+      history.replaceState(null, '', '#' + b.dataset.view);
+      window.scrollTo(0, 0);
+      syncView();
+    });
+  });
+  window.addEventListener('hashchange', function () {
+    var h = location.hash.replace('#', '');
+    if (h === 'scroll' || h === 'grid' || h === 'calendar') { root.dataset.view = h; syncView(); }
+  });
+  window.addEventListener('scroll', check, { passive: true });
+  window.addEventListener('resize', check);
+  if (viewBtns.length) syncView();
+
+  // ----- signup form -----
+  var form = document.getElementById('subscribe-form');
+  var note = document.getElementById('form-note');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      var email = form.elements.email;
+      if (!email.value || !email.checkValidity()) {
+        e.preventDefault();
+        if (note) note.textContent = 'Please enter a valid email address.';
+        email.focus();
+        return;
+      }
+      if (form.hasAttribute('data-unconfigured')) {
+        e.preventDefault();
+        if (note) note.textContent = 'Signup is not connected yet.';
+      }
+    });
+  }
+})();
