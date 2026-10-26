@@ -195,6 +195,17 @@ ${m.items.map(thumbCell).join('\n')}
     <button type="button" class="link-btn" data-view="calendar">Calendar</button>
   </div>
 </div>
+<div class="slimbar" id="slimbar">
+  <div class="slim-view">
+    <button type="button" class="link-btn" id="slim-view-btn" aria-haspopup="true" aria-expanded="false" aria-controls="slim-menu">View</button>
+    <ul class="slim-menu" id="slim-menu" hidden>
+      <li><button type="button" class="link-btn" data-view="scroll">Scroll</button></li>
+      <li><button type="button" class="link-btn" data-view="grid">Grid</button></li>
+      <li><button type="button" class="link-btn" data-view="calendar">Calendar</button></li>
+    </ul>
+  </div>
+  <button type="button" class="link-btn" id="slim-top">Top</button>
+</div>
 <div class="view view-scroll">
   <div class="col" id="scroll-list" data-loaded="${first.length}">
 ${first.length ? first.map((p, i) => postArticle(p, { eager: i === 0 })).join('\n') : empty}

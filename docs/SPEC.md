@@ -56,7 +56,12 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - The portal and sending code need npm packages; build and test them with Claude Code on Shaka's Mac. The cloud sandbox cannot reach the npm registry.
 - Repo size: about 2 MB per post after resizing, so 60 posts is roughly 120 MB. Commit only resized images.
 
+## Archive slim bar (added 2026-10-26)
+- In the archive (all three views), a slim text-only bar slides in when the reader scrolls up: VIEW on the left (opens a menu: Scroll / Grid / Calendar) and TOP on the right (jumps to the top and keeps the current view). It hides again on scroll down and is not shown at the top of the page, on post pages or on the home page.
+- REVISIT once the backfill starts: with 60+ posts, decide whether the bar should also appear on post pages or the home page, and whether the bar's behavior and size feel right.
+
 ## Still open
+- Revisit the slim bar (see above) once the backfill is in
 - Any skipped weeks in 2024 and early 2025
 - How to get the 60 posts' content out (PDF per post, or original files)
 - Approval UX: preview link plus an Approve button on the upload page

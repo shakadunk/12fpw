@@ -117,6 +117,20 @@ html[data-view="calendar"] .view-calendar { display: block; }
   .grid a:hover img, .latest a:hover img { opacity: 0.82; }
 }
 
+/* slim bar: appears on scroll-up in the archive (VIEW menu on the left, TOP on the right) */
+.slimbar { position: fixed; top: 0; left: 0; right: 0; z-index: 50; display: flex; justify-content: space-between; align-items: baseline; padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px; background: var(--bg); border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; transform: translateY(-100%); visibility: hidden; }
+.slimbar.show { transform: translateY(0); visibility: visible; }
+@media (prefers-reduced-motion: no-preference) {
+  .slimbar { transition: transform 0.2s ease, visibility 0s linear 0.2s; }
+  .slimbar.show { transition: transform 0.2s ease, visibility 0s; }
+}
+.slim-view { position: relative; }
+.slim-menu { position: absolute; top: calc(100% + 10px); left: calc(-1 * var(--pad)); min-width: 11rem; padding: 6px 0; background: var(--bg); border: 1px solid var(--line); border-left: 0; }
+.slim-menu[hidden] { display: none; }
+.slim-menu .link-btn { display: block; width: 100%; text-align: left; padding: 9px var(--pad); color: var(--mute); }
+.slim-menu .link-btn[aria-pressed="true"] { color: var(--fg); }
+.slim-menu .link-btn:hover { color: var(--fg); text-decoration: none; }
+
 /* phones (kept last so it overrides the rules above) */
 @media (max-width: 719px) {
   .logo img { height: 42px; }

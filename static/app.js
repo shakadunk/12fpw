@@ -24,7 +24,7 @@
   syncTheme();
 
   // ----- archive views + infinite scroll -----
-  var viewBtns = document.querySelectorAll('.view-toggle [data-view]');
+  var viewBtns = document.querySelectorAll('.view-toggle [data-view], .slim-menu [data-view]');
   var list = document.getElementById('scroll-list');
   var manifestEl = document.getElementById('manifest');
   var statusEl = document.getElementById('scroll-status');
@@ -83,6 +83,40 @@
   window.addEventListener('scroll', check, { passive: true });
   window.addEventListener('resize', check);
   if (viewBtns.length) syncView();
+
+  // ----- slim bar (archive only): hides on scroll down, returns on scroll up -----
+  var slim = document.getElementById('slimbar');
+  if (slim) {
+    var viewBtn = document.getElementById('slim-view-btn');
+    var menu = document.getElementById('slim-menu');
+    var topBtn = document.getElementById('slim-top');
+    var archiveBar = document.querySelector('.archive-bar');
+    var lastY = window.pageYOffset, ticking = false;
+
+    function closeMenu() { menu.hidden = true; viewBtn.setAttribute('aria-expanded', 'false'); }
+    function hideSlim() { slim.classList.remove('show'); closeMenu(); }
+    function topZone() { return archiveBar ? archiveBar.offsetTop + archiveBar.offsetHeight : 200; }
+    function update() {
+      ticking = false;
+      var y = window.pageYOffset;
+      var dy = y - lastY;
+      if (y <= topZone()) { hideSlim(); lastY = y; return; }   // page header and view switcher are already on screen
+      if (Math.abs(dy) < 6) return;                            // ignore tiny movements
+      if (dy < 0) slim.classList.add('show'); else hideSlim();
+      lastY = y;
+    }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+
+    viewBtn.addEventListener('click', function () {
+      var open = menu.hidden;
+      menu.hidden = !open;
+      viewBtn.setAttribute('aria-expanded', String(open));
+    });
+    menu.addEventListener('click', function (e) { if (e.target.closest('[data-view]')) closeMenu(); });
+    document.addEventListener('click', function (e) { if (!slim.contains(e.target)) closeMenu(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { closeMenu(); viewBtn.focus(); } });
+    topBtn.addEventListener('click', function () { window.scrollTo(0, 0); hideSlim(); });
+  }
 
   // ----- signup form -----
   var form = document.getElementById('subscribe-form');
