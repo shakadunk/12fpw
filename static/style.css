@@ -117,17 +117,28 @@ html[data-view="calendar"] .view-calendar { display: block; }
   .grid a:hover img, .latest a:hover img { opacity: 0.82; }
 }
 
-/* slim bar: appears on scroll-up in the archive (VIEW menu on the left, TOP on the right) */
-.slimbar { position: fixed; top: 0; left: 0; right: 0; z-index: 50; display: flex; justify-content: space-between; align-items: baseline; padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px; background: var(--bg); border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; transform: translateY(-100%); visibility: hidden; }
+/* slim bar: appears on scroll-up in the archive (VIEW menu on the left, TOP on the right).
+   The blurred, tinted backdrop is a ::before layer that runs a few px past the bar and fades out
+   (feathered), so the bar stays slim and the blur dissolves into the photo. */
+:root { --bar-tint: rgba(0, 0, 0, 0.30); }
+[data-theme="light"] { --bar-tint: rgba(255, 255, 255, 0.30); }
+.slimbar { position: fixed; top: 0; left: 0; right: 0; z-index: 50; display: flex; justify-content: space-between; align-items: baseline; padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px; font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; transform: translateY(calc(-100% - 12px)); visibility: hidden; }
 .slimbar.show { transform: translateY(0); visibility: visible; }
+.slimbar::before { content: ""; position: absolute; left: 0; right: 0; top: 0; bottom: -8px; z-index: -1; pointer-events: none; background: var(--bar-tint); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .slimbar::before { background: var(--bg); opacity: 0.88; }
+}
+@media (min-width: 720px) {
+  .slimbar { padding-left: max(var(--pad), calc((100% - 520px) / 2)); padding-right: max(var(--pad), calc((100% - 520px) / 2)); }
+}
 @media (prefers-reduced-motion: no-preference) {
   .slimbar { transition: transform 0.2s ease, visibility 0s linear 0.2s; }
   .slimbar.show { transition: transform 0.2s ease, visibility 0s; }
 }
 .slim-view { position: relative; }
-.slim-menu { position: absolute; top: calc(100% + 10px); left: calc(-1 * var(--pad)); min-width: 11rem; padding: 6px 0; background: var(--bg); border: 1px solid var(--line); border-left: 0; }
+.slim-menu { position: absolute; top: calc(100% + 12px); left: -12px; min-width: 10.5rem; padding: 6px 0; background: var(--bg); border: 1px solid var(--line); }
 .slim-menu[hidden] { display: none; }
-.slim-menu .link-btn { display: block; width: 100%; text-align: left; padding: 9px var(--pad); color: var(--mute); }
+.slim-menu .link-btn { display: block; width: 100%; text-align: left; padding: 9px 12px; color: var(--mute); }
 .slim-menu .link-btn[aria-pressed="true"] { color: var(--fg); }
 .slim-menu .link-btn:hover { color: var(--fg); text-decoration: none; }
 
