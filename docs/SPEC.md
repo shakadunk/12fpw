@@ -63,12 +63,13 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 
 ## Scroll-up bar (replaces the earlier VIEW / TOP archive bar; 2026-10-26)
 - On every page (home, archive, week pages): scrolling down hides the header and nothing replaces it; scrolling back up slides in ONE frosted band across the whole top of the screen. It is not shown while the header is still on screen, and hides again on scroll down.
-- Left: "12 FRAMES PER WEEK" in plain all-caps text (not a link; same size and colour as the buttons). On phones (under 720px wide) it shows "12FPW" instead. Right: ARCHIVE, TOP, LIGHT/DARK in that order (LIGHT in the same far-right spot as in the header).
+- Left: "12 FRAMES PER WEEK" in plain all-caps text, same size and colour as the buttons, and a link to the home page (underlined only on hover). On phones (under 720px wide) it shows "12FPW" instead. Right: ARCHIVE, TOP, LIGHT/DARK in that order (LIGHT in the same far-right spot as in the header).
 - ARCHIVE in the bar drops down SCROLL / GRID / CALENDAR (current view in full white, the others dimmed), the same menu as in the header, including hover-to-open on desktop.
-- Look: the band is about 30% tint (black in the dark theme, white in the light theme) with a 14px blur, feathered along its bottom edge so it dissolves into the photo; about 37px tall plus the feather. When the ARCHIVE menu is open the whole band deepens to hold it (one continuous block), and in the light theme the tint is firmer (about 55%) so the labels stay readable. The menu has no solid panel of its own.
+- Look: the band is about 30% tint (black in the dark theme, white in the light theme) with a 14px blur, feathered along its bottom edge so it dissolves into the photo; about 37px tall plus the feather. The band keeps this single depth at all times. When the ARCHIVE menu is open, a deeper frosted patch (same blur, feathered on all sides so it fades in from the band above) appears only behind the menu itself, not across the full width; in the light theme that patch is firmer (about 55% white) so the labels stay readable. The menu has no solid panel of its own.
 - TOP glides back to the top (ease in-out, about 0.45s for a short climb up to a cap of 1.4s), keeps the current view, any wheel/touch/key/mouse press stops the glide, reduced-motion readers get an instant jump.
 - Earlier iterations (for reference): a full-width bar with VIEW / TOP centred over the photos, then two separate frosted patches. Shaka chose the single band.
-- REVISIT once the backfill starts: with 60+ posts, check that the bar's behavior and size feel right, and whether deepening the whole band for the menu feels too heavy over photos (alternative: deepen only the right-hand part).
+- Earlier: the whole band deepened when the menu opened; Shaka found that too heavy, so the deeper blur is now only behind the menu.
+- REVISIT once the backfill starts: with 60+ posts, check that the bar's behavior and size feel right.
 
 ## Still open
 - Revisit the scroll-up bar (see above) once the backfill is in

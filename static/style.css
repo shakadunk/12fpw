@@ -142,7 +142,7 @@ html[data-view="calendar"] .view-calendar { display: block; }
   mask-composite: intersect;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .site-header .nav-archive.open::before, .slimbar::before { background: var(--bg); opacity: 0.88; }
+  .site-header .nav-archive.open::before, .slimbar .nav-menu::after, .slimbar::before { background: var(--bg); opacity: 0.88; }
 }
 /* header: the patch sits behind the open menu, under the ARCHIVE label */
 .site-header .nav-archive.open::before { left: -26px; right: -14px; top: 100%; height: calc(var(--menu-h, 117px) + 40px); }
@@ -155,18 +155,25 @@ html[data-view="calendar"] .view-calendar { display: block; }
   -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%);
   -webkit-mask-composite: initial; mask-composite: initial; }
-.slimbar.menu-open::before { bottom: calc(-1 * (var(--menu-h, 117px) + 22px));
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 26px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 26px), transparent 100%); }
-.slim-name { white-space: nowrap; }
+/* ARCHIVE menu in the bar: the band keeps its depth; a deeper frosted patch appears only behind the menu itself,
+   fading in from the band above it and feathered on its left and bottom edges. */
+.slimbar .nav-menu::after {
+  content: ""; position: absolute; z-index: -1; pointer-events: none; background: var(--bar-tint);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  left: -26px; right: -26px; top: -16px; bottom: -34px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 22px), transparent 100%), linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 22px), transparent 100%), linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+  mask-composite: intersect;
+}
+.slim-name { white-space: nowrap; pointer-events: auto; color: inherit; }
 .slim-name .short { display: none; }
 .slim-grp { position: relative; display: flex; align-items: baseline; gap: 1.5rem; pointer-events: auto; }
-[data-theme="light"] .slimbar.menu-open, [data-theme="light"] .site-header .nav-archive.open { --bar-tint: rgba(255, 255, 255, 0.55); }
+[data-theme="light"] .slimbar .nav-archive.open, [data-theme="light"] .site-header .nav-archive.open { --bar-tint: rgba(255, 255, 255, 0.55); }
 @media (prefers-reduced-motion: no-preference) {
   .slimbar { transition: transform 0.2s ease, visibility 0s linear 0.2s; }
   .slimbar.show { transition: transform 0.2s ease, visibility 0s; }
-  .slimbar::before { transition: bottom 0.18s ease; }
-}
+  }
 
 /* phones (kept last so it overrides the rules above) */
 @media (max-width: 719px) {
