@@ -27,10 +27,11 @@
   // ----- ARCHIVE dropdowns (header + scroll-up bar) -----
   var navs = Array.prototype.slice.call(document.querySelectorAll('.nav-archive'));
   function parts(nav) {
-    return { btn: nav.querySelector('.nav-archive-btn'), menu: nav.querySelector('.nav-menu'), host: nav.closest('.slim-grp') };
+    return { btn: nav.querySelector('.nav-archive-btn'), menu: nav.querySelector('.nav-menu'), host: nav.closest('.slimbar') };
   }
   function closeNav(nav) {
     var p = parts(nav);
+    clearTimeout(nav._t); delete nav.dataset.hover;
     p.menu.hidden = true;
     nav.classList.remove('open');
     if (p.host) p.host.classList.remove('menu-open');
@@ -47,9 +48,27 @@
     nav.classList.add('open');
     p.btn.setAttribute('aria-expanded', 'true');
   }
+  // Desktop (mouse): the menu opens when the pointer rests on ARCHIVE and closes shortly after it leaves.
+  // Clicking ARCHIVE while it is open from hovering "pins" it open (it then closes on Esc or a click elsewhere).
+  // Touch and pen never hover-open: they tap, as before.
   navs.forEach(function (nav) {
     var p = parts(nav);
-    p.btn.addEventListener('click', function () { if (p.menu.hidden) openNav(nav); else closeNav(nav); });
+    p.btn.addEventListener('click', function () {
+      if (!p.menu.hidden && nav.dataset.hover) { delete nav.dataset.hover; return; }   // pin
+      if (p.menu.hidden) openNav(nav); else closeNav(nav);
+    });
+    nav.addEventListener('pointerenter', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      clearTimeout(nav._t);
+      if (!p.menu.hidden) return;
+      nav._t = setTimeout(function () { openNav(nav); nav.dataset.hover = '1'; }, 80);   // short delay: a pointer sweeping past does not open it
+    });
+    nav.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      clearTimeout(nav._t);
+      if (!nav.dataset.hover) return;                                                  // pinned or opened by click: leave it
+      nav._t = setTimeout(function () { if (nav.dataset.hover) closeNav(nav); }, 250);
+    });
   });
   document.addEventListener('click', function (e) {
     navs.forEach(function (nav) { if (!nav.contains(e.target)) closeNav(nav); });

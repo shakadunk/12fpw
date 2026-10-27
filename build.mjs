@@ -134,6 +134,7 @@ if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;}catch(e){}})();
   </nav>
 </header>
 <div class="slimbar" id="slimbar">
+  <span class="slim-name" id="slim-name"><span class="long">${esc(cfg.name)}</span><span class="short">${esc(cfg.short || '12FPW')}</span></span>
   <div class="slim-grp" id="slim-grp">
     ${archiveMenu('slim')}
     <button type="button" class="link-btn" id="slim-top">Top</button>
