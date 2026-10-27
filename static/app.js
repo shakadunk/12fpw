@@ -119,6 +119,21 @@
     });
   });
 
+  // ----- GRID view: WEEKLY / FULL toggle (the choice is remembered) -----
+  var modeBtns = document.querySelectorAll('.grid-mode [data-mode]');
+  function syncMode() {
+    var m = root.dataset.gridmode === 'full' ? 'full' : 'weekly';
+    modeBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'); });
+  }
+  modeBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      root.dataset.gridmode = b.dataset.mode;
+      store.set('gridMode', b.dataset.mode);
+      syncMode();
+    });
+  });
+  syncMode();
+
   // ----- archive views + infinite scroll -----
   var viewLinks = document.querySelectorAll('.nav-menu [data-view]');
   var list = document.getElementById('scroll-list');

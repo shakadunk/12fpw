@@ -96,7 +96,7 @@ function postArticle(p, { eager = false, heading = 'h2' } = {}) {
   </header>
 ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.images.map((im, i) => {
     const img = `<img src="${p.url}${esc(im.file)}" alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async">`;
-    return `  <figure>${cfg.siteUrl ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
+    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${cfg.siteUrl ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
   }).join('\n')}
 </article>`;
 }
@@ -118,7 +118,7 @@ function layout({ title, description, path: urlPath, body, ogImage, page }) {
   const desc = description || cfg.blurb || cfg.name;
   const abs = (u) => (cfg.siteUrl ? cfg.siteUrl + u : u);
   return `<!doctype html>
-<html lang="en" data-theme="dark" data-view="${cfg.defaultView}">
+<html lang="en" data-theme="dark" data-view="${cfg.defaultView}" data-gridmode="weekly">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -136,7 +136,8 @@ ${ogImage && cfg.siteUrl ? `<meta property="og:image" content="${esc(abs(ogImage
 <script>
 (function(){var d=document.documentElement;try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')d.dataset.theme=t;
 var h=location.hash.replace('#','');var v=(h==='scroll'||h==='grid'||h==='calendar')?h:localStorage.getItem('archiveView');
-if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;}catch(e){}})();
+if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;var g=localStorage.getItem('gridMode');if(g==='full'||g==='weekly')d.dataset.gridmode=g;
+}catch(e){}})();
 </script>
 </head>
 <body data-page="${esc(page || '')}">
@@ -200,7 +201,18 @@ const thumbCell = (p) => {
   return `    <li><a href="${p.url}"><img src="${p.url}${esc(h.thumb || h.file)}" alt="${esc(h.alt || `${weekLabel(p)}, ${p.year}`)}"${dims(h.tw || h.w, h.th || h.h)} loading="lazy" decoding="async"><span class="tag"><b>${esc(weekLabel(p))}</b> ${p.year}</span></a></li>`;
 };
 
+// FULL grid: every image of every week, newest week first, one week per row (12 across on wide screens, 3 across on phones).
+// Each image links to that image inside its week's page.
+const fullWeek = (p) => `  <div class="fg-week">
+    <p class="fg-label"><b>${p.week}</b> <span>${p.year}</span></p>
+    <ul class="fg-row">
+${p.images.map((im, i) => `      <li><a href="${p.url}#img-${p.year}-${p.week}-${i + 1}"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async"></a></li>`).join('\n')}
+    </ul>
+  </div>`;
+
 function archivePage(posts) {
+  const full = `<div class="fullgrid">\n${posts.map(fullWeek).join('\n')}\n</div>`;
+  const toggle = `<div class="grid-mode" role="group" aria-label="Grid layout"><button type="button" class="link-btn" data-mode="weekly" aria-pressed="true">Weekly</button><button type="button" class="link-btn" data-mode="full" aria-pressed="false">Full</button></div>`;
   const grid = `<ul class="grid">\n${posts.map(thumbCell).join('\n')}\n  </ul>`;
   const months = [];
   for (const p of posts) {
@@ -228,7 +240,7 @@ ${first.length ? first.map((p, i) => postArticle(p, { eager: i === 0 })).join('\
   <noscript><p class="col label">Turn on JavaScript to keep scrolling, or use the Grid and Calendar views.</p></noscript>
 </div>
 <div class="view view-grid">
-  <div class="wide">${posts.length ? grid : empty}</div>
+  <div class="wide">${posts.length ? `${toggle}\n${grid}\n${full}` : empty}</div>
 </div>
 <div class="view view-calendar">
   <div class="wide">${posts.length ? calendar : empty}</div>
