@@ -146,7 +146,7 @@
   if (todayEl) {
     var showToday = function () {
       var d = new Date();
-      var label = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      var label = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });   // 26 October 2026
       if (todayEl.textContent !== label) {
         todayEl.textContent = label;
         var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };

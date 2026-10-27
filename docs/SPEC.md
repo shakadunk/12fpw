@@ -23,7 +23,7 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - SCROLL: newest first, infinite scroll, thin horizontal rule between posts.
 - GRID: Instagram-style grid of hero images (3 columns, square crops), each labelled with its week number. Click opens the post.
 - CALENDAR: the GRID, split into months with horizontal dividers.
-- Footer: on the home page the footer is just today's date at the bottom right (e.g. OCTOBER 26, 2026), shown in small uppercase type and filled in live from the visitor's device, so it rolls over at midnight if the page stays open. No copyright line, because most of the images are not Shaka's. The archive and post pages keep the older footer (site name plus Archive / Subscribe links) for now.
+- Footer: on the home page the footer is just today's date at the bottom right (e.g. 26 OCTOBER 2026, day number always two digits), shown in small uppercase type and filled in live from the visitor's device, so it rolls over at midnight if the page stays open. No copyright line, because most of the images are not Shaka's. The archive and post pages keep the older footer (site name plus Archive / Subscribe links) for now.
 - A post's calendar month comes from the Thursday of its ISO week (Week 1 of 2025 starts Dec 30, 2024 but files under January 2025). A post's issue.json can carry a real "date" to override.
 
 ## Email
