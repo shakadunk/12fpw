@@ -54,6 +54,9 @@ ul { padding: 0; list-style: none; }
 .site-footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 5rem var(--pad) var(--pad); font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
 .site-footer a { margin-left: 1.25rem; }
 .site-footer a:first-child { margin-left: 0; }
+/* home page footer: just today's date, bottom right (filled in by app.js) */
+.site-footer-date { justify-content: flex-end; }
+.today { display: block; min-height: 1.4em; }
 
 /* layout columns */
 .col { max-width: 680px; margin: 0 auto; padding: 0 20px; }

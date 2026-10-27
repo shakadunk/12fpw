@@ -127,10 +127,14 @@ if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;}catch(e){}})();
 <main id="main">
 ${body}
 </main>
-<footer class="site-footer">
+${page === 'home'
+  ? `<footer class="site-footer site-footer-date">
+  <time class="today" id="today"></time>
+</footer>`
+  : `<footer class="site-footer">
   <span>${esc(cfg.name)}</span>
   <span><a href="/archive/">Archive</a><a href="/#subscribe">Subscribe</a></span>
-</footer>
+</footer>`}
 <script src="/app.js" defer></script>
 </body>
 </html>

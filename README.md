@@ -18,6 +18,7 @@ docs/SPEC.md          the full plan: design, sending, backfill, what is left to 
 - **GRID:** a 3-column grid of one hero image per post, each labelled with its week number. Click one to open the post.
 - **CALENDAR:** the same grid, split into months by horizontal dividers.
 - A slim **VIEW / TOP** bar that slides in when you scroll up in the archive (VIEW opens a Scroll / Grid / Calendar menu; TOP glides back up through the page and keeps your view). It is a see-through, blurred strip with a feathered bottom edge, and the strip grows to hold the VIEW menu when it is open.
+- The home page footer shows only today's date at the bottom right (live, from the visitor's device).
 - **Post pages** at `/2024/week-3/`, the logo, and a home page with the signup form.
 - A Week 3 post with real text, plus 11 demo posts that reuse the same 12 images. **Delete every folder in `issues/` before the real launch.**
 - The signup form is not connected yet. See `docs/SPEC.md` for the plan (Resend).

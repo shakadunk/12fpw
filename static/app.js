@@ -141,6 +141,23 @@
     topBtn.addEventListener('click', function () { closeMenu(); flyToTop(); });
   }
 
+  // ----- home page footer: today's date, kept current while the page stays open -----
+  var todayEl = document.getElementById('today');
+  if (todayEl) {
+    var showToday = function () {
+      var d = new Date();
+      var label = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      if (todayEl.textContent !== label) {
+        todayEl.textContent = label;
+        var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        todayEl.setAttribute('datetime', d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()));
+      }
+    };
+    showToday();
+    setInterval(showToday, 15000);                       // rolls over at midnight if the tab stays open
+    document.addEventListener('visibilitychange', showToday);
+  }
+
   // ----- signup form -----
   var form = document.getElementById('subscribe-form');
   var note = document.getElementById('form-note');
