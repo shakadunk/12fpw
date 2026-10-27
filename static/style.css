@@ -90,7 +90,9 @@ a:hover .cap { color: var(--fg); }
 .post figure a { display: block; }
 .post figure a:hover { text-decoration: none; }
 .post figure img { width: 100%; background: var(--ph); }
-.post + .post { margin-top: 5rem; padding-top: 5rem; border-top: 1px solid var(--line); }
+/* between posts in the Scroll view: the same gap above and below the thin rule (the last image's own bottom margin is dropped so the gap above the rule is not larger) */
+.post figure:last-child { margin-bottom: 0; }
+.post + .post { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--line); }
 .pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
 .pager a:hover { color: var(--fg); }
 
