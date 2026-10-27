@@ -93,7 +93,7 @@
     var archiveBar = document.querySelector('.archive-bar');
     var lastY = window.pageYOffset, ticking = false;
 
-    function closeMenu() { menu.hidden = true; viewBtn.setAttribute('aria-expanded', 'false'); }
+    function closeMenu() { menu.hidden = true; slim.classList.remove('menu-open'); viewBtn.setAttribute('aria-expanded', 'false'); }
     function hideSlim() { slim.classList.remove('show'); closeMenu(); }
     function topZone() { return archiveBar ? archiveBar.offsetTop + archiveBar.offsetHeight : 200; }
     function update() {
@@ -108,9 +108,11 @@
     window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
 
     viewBtn.addEventListener('click', function () {
-      var open = menu.hidden;
-      menu.hidden = !open;
-      viewBtn.setAttribute('aria-expanded', String(open));
+      if (!menu.hidden) { closeMenu(); return; }
+      menu.hidden = false;
+      slim.style.setProperty('--menu-h', menu.offsetHeight + 'px');
+      slim.classList.add('menu-open');
+      viewBtn.setAttribute('aria-expanded', 'true');
     });
     menu.addEventListener('click', function (e) { if (e.target.closest('[data-view]')) closeMenu(); });
     document.addEventListener('click', function (e) { if (!slim.contains(e.target)) closeMenu(); });
