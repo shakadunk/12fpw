@@ -130,13 +130,22 @@ try:
         page.wait_for_timeout(300)
         cov = page.evaluate("""() => { const g=document.getElementById('slimbar'); const c=getComputedStyle(g,'::before'); const m=document.getElementById('slim-menu'); const mr=m.getBoundingClientRect(); const gr=g.getBoundingClientRect();
           const mi=(c.maskImage||c.webkitMaskImage||''); const ms=(c.maskSize||c.webkitMaskSize||''); const mc=(c.maskComposite||c.webkitMaskComposite||'');
-          return {open:g.classList.contains('menu-open'), layerBottom: gr.bottom-parseFloat(c.bottom), menuBottom: mr.bottom, bandH: gr.height, blur:(c.backdropFilter||c.webkitBackdropFilter), tint:c.backgroundColor, layers:(mi.match(/linear-gradient/g)||[]).length, mask:mc, size:ms,
+          return {open:g.classList.contains('menu-open'), layerBottom: gr.bottom-parseFloat(c.bottom), menuBottom: mr.bottom, bandH: gr.height, blur:(c.backdropFilter||c.webkitBackdropFilter), tint:c.backgroundColor, layers:(mi.match(/linear-gradient/g)||[]).length, hasImage: mi.includes('url('), mask:mc, size:ms,
                   afterContent:getComputedStyle(m,'::after').content, afterBlur:(getComputedStyle(m,'::after').backdropFilter||getComputedStyle(m,'::after').webkitBackdropFilter||'none'),
                   pl:parseFloat(g.style.getPropertyValue('--patch-l')), pw:parseFloat(g.style.getPropertyValue('--patch-w')), innerW:innerWidth, menuL:mr.left, menuR:mr.right} }""")
         check("bar: the band keeps its single depth when the menu opens", cov["bandH"] < 42)
         check("bar: ONE frosted layer covers the bar and extends down past the menu (no second layer)", cov["open"] and cov["layerBottom"] >= cov["menuBottom"] + 15 and cov["afterContent"] in ("none", "normal"))
-        check("bar: that layer is the band's own blur and tint (30%) with a union mask (band + menu column)", "blur(14px)" in cov["blur"] and cov["tint"] == "rgba(0, 0, 0, 0.3)" and cov["layers"] == 3 and "add" in cov["mask"] and "intersect" in cov["mask"])
-        check("bar: the menu column is what extends (not the whole width)", cov["pw"] < 240 and cov["pl"] > cov["innerW"] / 2 - 100 and cov["pl"] <= cov["menuL"] and cov["pl"] + cov["pw"] >= cov["menuR"])
+        check("bar: that layer is the band's own blur and tint (30%), masked as band + one drawn shape (union)", "blur(14px)" in cov["blur"] and cov["tint"] == "rgba(0, 0, 0, 0.3)" and cov["layers"] == 1 and cov["hasImage"] and "add" in cov["mask"] and "intersect" not in cov["mask"])
+        check("bar: the menu column is what extends (not the whole width)", cov["pw"] < 260 and cov["pl"] > cov["innerW"] / 2 - 100 and cov["pl"] + cov["pw"] >= cov["menuR"])
+        check("bar: about 41px of room to the left of the labels, 26px right of the menu, 30px below", abs(cov["menuL"] - cov["pl"] - 41) <= 1.5 and abs((cov["pl"] + cov["pw"]) - cov["menuR"] - 26) <= 1.5 and abs(cov["layerBottom"] - cov["menuBottom"] - 30) <= 2)
+        shape = page.evaluate("""async () => { const g=document.getElementById('slimbar'); const m=g.style.getPropertyValue('--menu-mask'); const url=m.slice(m.indexOf('"')+1, m.lastIndexOf('"'));
+          const img=new Image(); await new Promise((res,rej)=>{img.onload=res; img.onerror=rej; img.src=url;}); const W=img.naturalWidth, H=img.naturalHeight; const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d'); x.drawImage(img,0,0); const d=x.getImageData(0,0,W,H).data; const A=(px,py)=>d[(py*W+px)*4+3]; const S=2;
+          let maxStep=0; for (const row of [Math.round(H*0.5), H-40*S, H-24*S, H-8*S]) for (let px=1; px<W; px++) maxStep=Math.max(maxStep, Math.abs(A(px,row)-A(px-1,row)));
+          for (const col of [Math.round(W*0.5), 40*S, W-40*S, 14*S]) for (let py=1; py<H; py++) maxStep=Math.max(maxStep, Math.abs(A(col,py)-A(col,py-1)));
+          return {W,H,S, cornerBL:A(4*S, H-1-4*S), cornerBR:A(W-1-4*S, H-1-4*S), edgeL:A(4*S, H-70*S), edgeR:A(W-1-4*S, H-70*S), centre:A(Math.round(W/2), H-30*S), midBottom:A(Math.round(W/2), H-4*S), top:A(Math.round(W/2), 2), maxStep}; }""")
+        check("bar: the shape's bottom corners are ROUND (the outer corner points are fully clear, the straight edges are not)", shape["cornerBL"] == 0 and shape["cornerBR"] == 0 and 20 < shape["edgeL"] < 90 and 20 < shape["edgeR"] < 90 and shape["centre"] == 255 and shape["top"] == 255)
+        check("bar: the shape is symmetrical left to right", abs(shape["edgeL"] - shape["edgeR"]) <= 3 and abs(shape["cornerBL"] - shape["cornerBR"]) <= 3)
+        check("bar: the shape is one smooth image with no seams (alpha never jumps between neighbouring pixels)", shape["maxStep"] <= 12)
         check("bar: menu text is fully on screen", page.evaluate("(()=>{const r=document.getElementById('slim-menu').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"))
         page.screenshot(path=f"{out}/nav-bar-open.png", clip={"x": 0, "y": 0, "width": 1440, "height": 400})
         page.keyboard.press("Escape")

@@ -49,14 +49,41 @@
       // Geometry for the single frosted layer behind the bar + menu (see style.css): how far it extends below the band,
       // and the menu column's left edge and width in px.
       var br = p.host.getBoundingClientRect(), mr = p.menu.getBoundingClientRect();
-      p.host.style.setProperty('--menu-extra', Math.max(0, Math.round((mr.bottom + 34) - (br.bottom + 8))) + 'px');
-      p.host.style.setProperty('--patch-l', Math.round(mr.left - 26) + 'px');
-      p.host.style.setProperty('--patch-w', Math.round(mr.width + 52) + 'px');
+      // Outer edges of the frosted shape around the menu (it fades in over ~24px, so it is clearly visible about 18px in):
+      // 41px left of the labels, 26px right of the menu, 30px below it.
+      var extra = Math.max(0, Math.round((mr.bottom + 30) - (br.bottom + 8)));
+      var pl = Math.round(mr.left - 41), pw = Math.round(mr.width + 67);
+      p.host.style.setProperty('--menu-extra', extra + 'px');
+      p.host.style.setProperty('--patch-l', pl + 'px');
+      p.host.style.setProperty('--patch-w', pw + 'px');
+      p.host.style.setProperty('--menu-mask', menuMask(pw, br.height + 8 + extra, 40, 24));
       p.host.classList.add('menu-open');
     }
     nav.classList.add('open');
     p.btn.setAttribute('aria-expanded', 'true');
   }
+  // Soft rounded shape for the frosted area under the ARCHIVE menu, drawn once per open as one smooth image (so there are
+  // no seams): w x h px, rounded bottom corners of radius `c`, edges fading in over `f` px. The top edge is left open
+  // because it sits inside the bar. Returned as a CSS url() for use as a mask image.
+  function menuMask(w, h, c, f) {
+    var S = 2, W = Math.max(1, Math.round(w * S)), H = Math.max(1, Math.round(h * S));
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var ctx = cv.getContext('2d'); if (!ctx) return 'none';
+    var img = ctx.createImageData(W, H), d = img.data;
+    for (var y = 0; y < H; y++) {
+      for (var x = 0; x < W; x++) {
+        var px = (x + 0.5) / S, py = (y + 0.5) / S;
+        var dist = Math.min(px, w - px, h - py);                                       // distance to the nearest straight edge
+        if (py > h - c && px < c) dist = c - Math.hypot(px - c, py - (h - c));         // bottom-left corner
+        else if (py > h - c && px > w - c) dist = c - Math.hypot(px - (w - c), py - (h - c));   // bottom-right corner
+        var a = dist <= 0 ? 0 : dist >= f ? 1 : dist / f;
+        d[(y * W + x) * 4 + 3] = Math.round(a * 255);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return 'url("' + cv.toDataURL('image/png') + '")';
+  }
+
   // Desktop (mouse): the menu opens when the pointer rests on ARCHIVE and closes shortly after it leaves.
   // Clicking ARCHIVE while it is open from hovering "pins" it open (it then closes on Esc or a click elsewhere).
   // Touch and pen never hover-open: they tap, as before.
