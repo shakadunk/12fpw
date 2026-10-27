@@ -81,8 +81,8 @@ a:hover .cap { color: var(--fg); }
 .post-head { text-align: center; }
 .week { font-size: 14px; font-weight: 400; line-height: 1.4; color: var(--mute); letter-spacing: 0.02em; }
 .week a { color: var(--text); }
-.week .year { font-size: 12px; margin-left: 0.35em; }
-.week::after { content: ""; display: block; width: 52px; height: 1px; background: var(--fg); margin: 16px auto 30px; }
+.week .year { margin-left: 0.35em; }   /* same size as "Week N"; stays grey */
+.week { margin-bottom: 24px; }   /* no underline under the heading any more (2026-10-27 draft); this keeps the text as far below the heading as the heading is below the rule */
 .text { margin-bottom: 2rem; }
 .text p { margin-bottom: 1.1em; }
 .text p.preface { font-style: italic; color: var(--mute); }
@@ -92,7 +92,7 @@ a:hover .cap { color: var(--fg); }
 .post figure img { width: 100%; background: var(--ph); }
 /* between posts in the Scroll view: the same gap above and below the thin rule (the last image's own bottom margin is dropped so the gap above the rule is not larger) */
 .post figure:last-child { margin-bottom: 0; }
-.post + .post { margin-top: 2.5rem; padding-top: 17px; border-top: 1px solid var(--line); }   /* 17px puts the Week heading as far below the rule as the small underline is below the heading */
+.post + .post { margin-top: 1.4rem; padding-top: 32px; border-top: 1px solid var(--line); }   /* 32px puts the Week heading as far below the rule as the first line of text is below the heading's small underline */
 .pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
 .pager a:hover { color: var(--fg); }
 
