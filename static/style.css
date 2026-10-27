@@ -166,7 +166,6 @@ html[data-view="calendar"] .view-calendar { display: block; }
 }
 .slim-name { white-space: nowrap; pointer-events: auto; color: inherit; }
 .slim-grp { position: relative; display: flex; align-items: baseline; gap: 1.5rem; pointer-events: auto; }
-[data-theme="light"] .slimbar .nav-archive.open, [data-theme="light"] .site-header .nav-archive.open { --bar-tint: rgba(255, 255, 255, 0.55); }
 @media (prefers-reduced-motion: no-preference) {
   .slimbar { transition: transform 0.2s ease, visibility 0s linear 0.2s; }
   .slimbar.show { transition: transform 0.2s ease, visibility 0s; }
