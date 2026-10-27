@@ -165,6 +165,7 @@ ${page === 'home'
   <span>${esc(cfg.name)}</span>
   <span><a href="/archive/">Archive</a></span>
 </footer>`}
+<button type="button" class="link-btn theme-toggle corner-theme" id="corner-theme"></button>
 <script src="/app.js" defer></script>
 </body>
 </html>

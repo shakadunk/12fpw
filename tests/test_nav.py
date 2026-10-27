@@ -32,7 +32,7 @@ def all_posts_loaded(page):
 try:
     with sync_playwright() as p:
         br = p.chromium.launch()
-        ctx = br.new_context(viewport={"width": 1440, "height": 900})
+        ctx = br.new_context(viewport={"width": 1180, "height": 900})   # below 1200px: the classic ARCHIVE, TOP, LIGHT layout (the 1200px+ layout is tested in test_wide.py)
         ctx.add_init_script("try{history.scrollRestoration='manual'}catch(e){}")   # reloads must start at the top, or the bar tests race the browser's scroll restoration
         page = ctx.new_page()
         errors = []

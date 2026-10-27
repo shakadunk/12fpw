@@ -199,6 +199,20 @@ html[data-view="calendar"] .view-calendar { display: block; }
   .slimbar.show { transition: transform 0.2s ease, visibility 0s; }
 }
 
+/* wide desktop screens (1200px and up; there is empty space either side of the text column there):
+   - LIGHT/DARK leaves the header and the scroll-up bar and stands alone in the bottom-left corner of the screen
+   - ARCHIVE is the far-right item in the header AND in the bar, so it never moves; TOP appears to its left in the bar
+   - the ARCHIVE menu opens right-aligned under the button, so it stays on screen
+   Below 1200px nothing here applies and the header/bar keep their earlier layout (ARCHIVE, TOP, LIGHT). */
+.corner-theme { display: none; }
+@media (min-width: 1200px) {
+  .site-header .theme-toggle, .slimbar .theme-toggle { display: none; }
+  .slim-grp #slim-top { order: -1; }
+  .nav-menu { left: auto; right: 0; min-width: 0; text-align: right; }
+  .corner-theme { display: block; position: fixed; z-index: 40; left: var(--pad); bottom: calc(var(--pad) - 6px); font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding: 6px 0; }
+  .corner-theme:hover { color: var(--fg); text-decoration: none; }
+}
+
 /* phones (kept last so it overrides the rules above) */
 @media (max-width: 719px) {
   .slim-name .long { display: none; }

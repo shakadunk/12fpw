@@ -11,7 +11,7 @@ build.mjs             generates dist/ from the above
 scripts/add-post.mjs  makes a post from a folder of 12 images + a text file
 vercel.json           tells Vercel to run `npm run build` and serve dist/
 docs/SPEC.md          the full plan: design, sending, backfill, what is left to build
-tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py` (also test_footer.py, test_seam.py, test_balance.py, test_links.py)
+tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py` (also test_footer.py, test_seam.py, test_balance.py, test_links.py, test_wide.py)
 ```
 
 ## What is in this version
@@ -20,6 +20,7 @@ tests/                browser tests (Python + Playwright): `python3 tests/test_n
 - **GRID:** a 3-column grid of one hero image per post, each labelled with its week number. Click one to open the post.
 - **CALENDAR:** the same grid, split into months by horizontal dividers.
 - **Header:** the name as plain text (**12 FRAMES PER WEEK**, or 12FPW on phones, always a link to the home page), **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on desktop it opens when you hover over it (click pins it open), on phones you tap. On the archive it switches the view in place, anywhere else it opens the archive in that view.
+- **Wide desktop screens (1200px and up):** LIGHT/DARK stands alone in the bottom-left corner; ARCHIVE is the far-right item in the header and in the scroll-up bar (TOP appears to its left in the bar), so it never moves. Narrower screens keep ARCHIVE, TOP and LIGHT together.
 - **Scroll-up bar (every page):** scroll down and the header goes away; scroll back up and **ARCHIVE, TOP and LIGHT/DARK** slide in as one frosted (blurred, see-through) band across the top, feathered at its bottom edge: **12 FRAMES PER WEEK** at the left (a link home; 12FPW on phones), ARCHIVE / TOP / LIGHT at the right. It lingers for a second after you start scrolling down (and stays while the mouse is on it), so it does not vanish abruptly. TOP glides back up through the page, and while the ARCHIVE menu is open the same frosted layer extends down under it, so the bar and the menu read as one piece, with softly rounded bottom corners.
 - **Home page** = the most recent post. An older week opened from the archive has a back-to-archive link at the top.
 - The home page footer shows only today's date at the bottom right (live, from the visitor's device), as 26 OCTOBER 2026.
