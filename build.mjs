@@ -113,6 +113,7 @@ ${VIEWS.map((v) => `        <li><a href="/archive/#${v}" data-view="${v}">${v[0]
       </ul>
     </div>`;
 
+// Footer: only the home page has one (today's date). Every other page gets an empty, hidden block that just keeps the space at the bottom.
 function layout({ title, description, path: urlPath, body, ogImage, page }) {
   const full = title ? `${title} — ${cfg.name}` : cfg.name;
   const desc = description || cfg.blurb || cfg.name;
@@ -164,10 +165,7 @@ ${page === 'home'
   ? `<footer class="site-footer site-footer-date">
   <time class="today" id="today"></time>
 </footer>`
-  : `<footer class="site-footer">
-  <span>${esc(cfg.name)}</span>
-  <span><a href="/archive/">Archive</a></span>
-</footer>`}
+  : `<div class="site-footer" aria-hidden="true"></div>`}
 <button type="button" class="link-btn theme-toggle corner-theme" id="corner-theme"></button>
 <script src="/app.js" defer></script>
 </body>

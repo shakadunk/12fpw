@@ -40,11 +40,14 @@ try:
         expected = page3.evaluate("new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})").lower()
         check("home: with the real clock it shows the device's date", page3.inner_text("#today").strip().lower() == expected)
 
-        # other pages keep the original footer
-        for url in ("/archive/", "/2023/week-3/"):
+        # every other page has no footer text at all (the name and Archive link were removed), only empty space at the bottom
+        for url in ("/archive/", "/2023/week-3/", "/no-such-page/"):
             page3.goto(B + url); page3.wait_for_load_state("networkidle")
-            f = page3.locator("footer").text_content()
-            check(f"{url}: footer keeps the name + Archive link (Subscribe link removed with the signup form)", "12 Frames Per Week" in f and "Archive" in f and "Subscribe" not in f and page3.locator("#today").count() == 0)
+            txt = page3.evaluate("[...document.querySelectorAll('.site-footer')].map(e => e.textContent.trim()).join('')")
+            check(f"{url}: no footer text or links (no name, no Archive link)", txt == "" and page3.locator(".site-footer a").count() == 0 and page3.locator("footer").count() == 0 and page3.locator("#today").count() == 0)
+            check(f"{url}: still some space under the last content", page3.evaluate("(()=>{const f=document.querySelector('.site-footer');return f && f.getBoundingClientRect().height >= 60})()"))
+        page3.goto(B + "/archive/#grid"); page3.wait_for_load_state("networkidle")
+        check("grid page: nothing below the grid but space", page3.evaluate("document.body.innerText.toLowerCase().trim().endsWith('2023') || !document.body.innerText.toLowerCase().includes('12 frames per week archive')"))
 
         # light theme and phone
         page3.add_init_script("try{localStorage.setItem('theme','light')}catch(e){}")
