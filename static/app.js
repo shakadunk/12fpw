@@ -54,6 +54,7 @@
   navs.forEach(function (nav) {
     var p = parts(nav);
     p.btn.addEventListener('click', function () {
+      clearTimeout(nav._t);                                                            // a quick click beats a pending hover-open
       if (!p.menu.hidden && nav.dataset.hover) { delete nav.dataset.hover; return; }   // pin
       if (p.menu.hidden) openNav(nav); else closeNav(nav);
     });
@@ -158,7 +159,30 @@
     var slimNav = slim.querySelector('.nav-archive');
     var lastY = window.pageYOffset, ticking = false;
 
-    function hideSlim() { slim.classList.remove('show'); if (slimNav) closeNav(slimNav); }
+    // Scrolling down does not hide the bar at once: it lingers for HIDE_DELAY first. Scrolling back up cancels the
+    // countdown (the bar stays), and while a mouse is resting on the bar or its menu the bar stays; the countdown
+    // starts again when the mouse leaves. Reaching the top of the page hides it immediately (the header is back).
+    var HIDE_DELAY = 1000;
+    var hideTimer = 0, hidePending = false, overBar = false;
+
+    function cancelHide() { clearTimeout(hideTimer); hideTimer = 0; }
+    function hideSlim() { cancelHide(); hidePending = false; slim.classList.remove('show'); if (slimNav) closeNav(slimNav); }
+    function scheduleHide() {
+      if (hideTimer || !slim.classList.contains('show')) return;
+      hidePending = true;
+      hideTimer = setTimeout(function () {
+        hideTimer = 0;
+        if (overBar) return;                                   // mouse is on the bar: wait for it to leave
+        hideSlim();
+      }, HIDE_DELAY);
+    }
+    slim.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { overBar = true; cancelHide(); } });
+    slim.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      overBar = false;
+      if (hidePending) scheduleHide();                         // it was on its way out: restart the countdown
+    });
+
     function topZone() { return header ? header.offsetTop + header.offsetHeight : 120; }
     function update() {
       ticking = false;
@@ -166,7 +190,9 @@
       var dy = y - lastY;
       if (y <= topZone()) { hideSlim(); lastY = y; return; }   // the header is still on screen
       if (Math.abs(dy) < 6) return;                            // ignore tiny movements
-      if (dy < 0) slim.classList.add('show'); else hideSlim();
+      if (dy < 0) { cancelHide(); hidePending = false; slim.classList.add('show'); }
+      else if (!overBar) scheduleHide();
+      else hidePending = true;
       lastY = y;
     }
     window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
