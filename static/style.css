@@ -146,7 +146,8 @@ html[data-view="calendar"] .view-calendar { display: block; }
 .site-header .nav-archive.open::before { left: -26px; right: -14px; top: 100%; height: calc(var(--menu-h, 117px) + 40px); }
 
 /* scroll-up bar: ONE frosted band across the top of the screen. 12 FRAMES PER WEEK at the left (12FPW on phones);
-   ARCHIVE, TOP and LIGHT/DARK at the right. The band is feathered along its bottom edge, and deepens to hold the ARCHIVE menu. */
+   ARCHIVE, TOP and LIGHT/DARK at the right. The band is feathered along its bottom edge and keeps one depth; the ARCHIVE
+   menu gets its own patch (same tint and blur) below. */
 .slimbar { position: fixed; top: 0; left: 0; right: 0; z-index: 50; display: flex; justify-content: space-between; align-items: baseline; padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px; font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; transform: translateY(calc(-100% - 12px)); visibility: hidden; pointer-events: none; }
 .slimbar.show { transform: translateY(0); visibility: visible; }
 .slimbar::before { left: 0; right: 0; top: 0; bottom: -8px;
@@ -169,7 +170,7 @@ html[data-view="calendar"] .view-calendar { display: block; }
 @media (prefers-reduced-motion: no-preference) {
   .slimbar { transition: transform 0.2s ease, visibility 0s linear 0.2s; }
   .slimbar.show { transition: transform 0.2s ease, visibility 0s; }
-  }
+}
 
 /* phones (kept last so it overrides the rules above) */
 @media (max-width: 719px) {
