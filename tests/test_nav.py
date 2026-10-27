@@ -6,6 +6,12 @@ out = "/tmp/12fpw-test-shots"; os.makedirs(out, exist_ok=True)
 srv = subprocess.Popen(["node", "scripts/serve.mjs"], cwd=proj, env={**os.environ, "PORT": "3266"}, stdout=subprocess.DEVNULL)
 time.sleep(1)
 B = "http://localhost:3266"
+# how many posts exist and which are newest / oldest, so the checks keep working as real posts replace the demo ones
+slugs = sorted(d for d in os.listdir(os.path.join(proj, "issues")) if d[:4].isdigit())
+N = len(slugs)
+def wk(slug): y, w = slug.split("-w"); return int(y), int(w)
+newest_wk, oldest_wk = wk(slugs[-1]), wk(slugs[0])
+def month_of(yw): return datetime.date.fromisocalendar(yw[0], yw[1], 4).strftime("%B %Y")
 results = []
 def check(name, cond):
     results.append((name, bool(cond))); print(("PASS " if cond else "FAIL ") + name)
@@ -21,7 +27,7 @@ def up(page, y, back=150):
 def all_posts_loaded(page):
     for _ in range(30):
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)"); page.wait_for_timeout(300)
-        if page.locator("#scroll-list .post").count() == 12: break
+        if page.locator("#scroll-list .post").count() == N: break
 
 try:
     with sync_playwright() as p:
@@ -85,18 +91,18 @@ try:
         # ================= ARCHIVE page =================
         check("archive: no title row and no inline SCROLL/GRID/CALENDAR buttons", page.locator(".archive-bar").count() == 0 and page.locator(".view-toggle").count() == 0)
         check("archive: header ARCHIVE is marked as the current page", page.get_attribute("#nav-btn", "aria-current") == "page")
-        check("archive: grid has 12 thumbnails with week labels", page.locator(".view-grid .grid li").count() == 12 and all(t.startswith("Week") for t in page.locator(".view-grid .tag").all_inner_texts()))
+        check("archive: grid has one thumbnail per post, with week labels", page.locator(".view-grid .grid li").count() == N and all(t.startswith("Week") for t in page.locator(".view-grid .tag").all_inner_texts()))
         page.click("#nav-btn")
         check("archive: current view is full white in the menu, others dimmed", page.evaluate("(()=>{const a=getComputedStyle(document.querySelector('#nav-menu [aria-current=true]')).opacity;const b=getComputedStyle(document.querySelector('#nav-menu a:not([aria-current])')).opacity;return a==='1'&&parseFloat(b)<0.8})()"))
         check("archive: current view marked is GRID", page.get_attribute('#nav-menu [aria-current="true"]', "data-view") == "grid")
         page.click('#nav-menu a[data-view="calendar"]'); page.wait_for_timeout(300)
         heads = [h.title() for h in page.locator(".view-calendar .month h2").all_inner_texts()]
-        check("archive: switching to CALENDAR happens in place (months, dividers)", page.is_visible(".view-calendar") and heads[0] == "January 2025" and heads[-1] == "January 2024" and page.url.endswith("#calendar"))
+        check("archive: switching to CALENDAR happens in place (months, dividers)", page.is_visible(".view-calendar") and heads[0] == month_of(newest_wk) and heads[-1] == month_of(oldest_wk) and page.url.endswith("#calendar"))
         check("archive: menu closed and page at the top after switching", not page.is_visible("#nav-menu") and page.evaluate("window.pageYOffset") == 0)
         page.click("#nav-btn"); page.click('#nav-menu a[data-view="scroll"]'); page.wait_for_timeout(400)
-        check("archive: SCROLL view starts with the newest post first", page.is_visible(".view-scroll") and "Week 2" in page.locator("#scroll-list .post .week").first.inner_text())
+        check("archive: SCROLL view starts with the newest post first", page.is_visible(".view-scroll") and f"Week {newest_wk[1]}" in page.locator("#scroll-list .post .week").first.inner_text())
         all_posts_loaded(page)
-        check("archive: infinite scroll loads all 12, newest to oldest", page.locator("#scroll-list .post").count() == 12 and "Week 3" in page.locator("#scroll-list .post .week").last.inner_text())
+        check("archive: infinite scroll loads every post, newest to oldest", page.locator("#scroll-list .post").count() == N and f"Week {oldest_wk[1]}" in page.locator("#scroll-list .post .week").last.inner_text())
         check("archive: thin rule between posts", page.evaluate("getComputedStyle(document.querySelectorAll('#scroll-list .post')[1]).borderTopWidth") == "1px")
         check("archive: view is remembered across a reload", (page.reload() or True) and page.is_visible(".view-scroll"))
         page.goto(B + "/archive/#calendar"); page.reload()

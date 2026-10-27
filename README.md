@@ -11,7 +11,7 @@ build.mjs             generates dist/ from the above
 scripts/add-post.mjs  makes a post from a folder of 12 images + a text file
 vercel.json           tells Vercel to run `npm run build` and serve dist/
 docs/SPEC.md          the full plan: design, sending, backfill, what is left to build
-tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py` (also test_footer.py, test_seam.py, test_balance.py)
+tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py` (also test_footer.py, test_seam.py, test_balance.py, test_links.py)
 ```
 
 ## What is in this version
@@ -30,7 +30,7 @@ tests/                browser tests (Python + Playwright): `python3 tests/test_n
 ## Run it locally
 
 ```
-npm install        # adds sharp, which add-post uses to resize images
+npm install        # adds sharp, which add-post uses to read image sizes and make grid thumbnails
 npm run dev        # builds, then serves http://localhost:3000
 ```
 
@@ -42,9 +42,9 @@ Put the 12 images in a folder (they are used in filename order) with a `text.txt
 npm run add-post -- ~/Desktop/week-3 --year 2025 --week 3 --hero 4 --push
 ```
 
-- `--hero` is which image (1 to 12) is the thumbnail in Grid and Calendar. Default is 1.
+- The hero (thumbnail in Grid and Calendar) is always image 1. `--hero N` still exists but is not used.
 - `--push` commits and pushes, and Vercel redeploys in about a minute. Leave it off to look at the result first.
-- Images are resized to 1600px on the long edge and a thumbnail is made for each, so the repo stays small. Do not commit full-size originals.
+- Images are kept at FULL SIZE (copied byte for byte; HEIC/TIFF become a high-quality JPEG) and a 700px thumbnail is made for the grid. Each image links to a Google reverse-image search. A paragraph wrapped in asterisks in `text.txt` shows in italic grey.
 - A post's date comes from its week: Calendar uses the Thursday of that ISO week, so Week 1 of 2025 files under January 2025. To use the real send date, add `"date": "2025-01-09"` to the post's `issue.json`.
 
 ## Put it online

@@ -75,7 +75,15 @@ function loadPosts() {
 }
 
 // ---------- templates ----------
-const paragraphs = (text) => text.split(/\n{2,}/).filter(Boolean).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('\n');
+// A paragraph wrapped in asterisks (*like this*) is the italic, muted "preface" style used in a few early weeks.
+const paragraphs = (text) => text.split(/\n{2,}/).filter(Boolean).map((p) => {
+  const pre = /^\*[^*]([\s\S]*[^*])?\*$/.test(p.trim());
+  const body = pre ? p.trim().slice(1, -1) : p;
+  return `<p${pre ? ' class="preface"' : ''}>${esc(body).replace(/\n/g, '<br>')}</p>`;
+}).join('\n');
+// Each image links to a Google reverse-image search (Google Lens) of that image, so viewers can trace where it came from.
+// It needs the image's public address, so it only appears once the site's address is known (see siteUrl above).
+const lensUrl = (imgUrl) => `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(imgUrl)}`;
 const weekLabel = (p) => `Week ${p.week}`;
 
 function postArticle(p, { eager = false, heading = 'h2' } = {}) {
@@ -84,7 +92,10 @@ function postArticle(p, { eager = false, heading = 'h2' } = {}) {
   <header class="post-head">
     <${heading} class="week"><a href="${p.url}">${esc(weekLabel(p))}</a> <span class="year">${p.year}</span></${heading}>
   </header>
-${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.images.map((im, i) => `  <figure><img src="${p.url}${esc(im.file)}" alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async"></figure>`).join('\n')}
+${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.images.map((im, i) => {
+    const img = `<img src="${p.url}${esc(im.file)}" alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async">`;
+    return `  <figure>${cfg.siteUrl ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
+  }).join('\n')}
 </article>`;
 }
 

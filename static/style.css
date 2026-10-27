@@ -85,7 +85,10 @@ a:hover .cap { color: var(--fg); }
 .week::after { content: ""; display: block; width: 52px; height: 1px; background: var(--fg); margin: 16px auto 30px; }
 .text { margin-bottom: 2rem; }
 .text p { margin-bottom: 1.1em; }
+.text p.preface { font-style: italic; color: var(--mute); }
 .post figure { margin: 0 0 1.4rem; }
+.post figure a { display: block; }
+.post figure a:hover { text-decoration: none; }
 .post figure img { width: 100%; background: var(--ph); }
 .post + .post { margin-top: 5rem; padding-top: 5rem; border-top: 1px solid var(--line); }
 .pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }

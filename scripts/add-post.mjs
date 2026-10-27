@@ -3,9 +3,10 @@
 //   node scripts/add-post.mjs <folder> --year 2025 --week 3 [--text text.txt] [--hero 1] [--force] [--push]
 //
 // <folder> holds the 12 images (sorted by filename) and optionally text.txt.
-// Images are resized (long edge 1600px, JPEG) and a thumbnail is made for the Grid view,
-// so the repo stays small. Needs `npm install` once (for sharp).
-// --hero is the image number (1 to 12) used as the thumbnail. Default is 1.
+// The images are kept at FULL SIZE: browser-friendly files (JPEG, PNG, WebP, GIF, AVIF) are copied byte for byte,
+// with no resizing or re-compressing. Anything else (HEIC, TIFF) is converted to a high-quality full-size JPEG.
+// A small thumbnail is also made for the Grid view. Needs `npm install` once (for sharp).
+// --hero is the image number (1 to 12) used as the thumbnail. The hero is always image 1, so leave this off.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,16 +53,30 @@ fs.rmSync(dest, { recursive: true, force: true });
 fs.mkdirSync(dest, { recursive: true });
 
 const images = [];
+const SAFE = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
+const BIG = 8 * 1024 * 1024;
 for (const [i, f] of files.entries()) {
   const n = String(i + 1).padStart(2, '0');
   const input = path.join(folder, f);
-  const full = await sharp(input).rotate().flatten({ background: '#000000' })
-    .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 82, mozjpeg: true }).toFile(path.join(dest, `${n}.jpg`));
+  const ext = path.extname(f).toLowerCase();
+  const info = await sharp(input).metadata();
+  let file, w, h;
+  if (SAFE.has(ext)) {
+    file = `${n}${ext === '.jpeg' ? '.jpg' : ext}`;
+    fs.copyFileSync(input, path.join(dest, file));
+    const turned = (info.orientation || 1) >= 5;   // the browser applies the EXIF rotation, so swap width and height to match
+    w = turned ? info.height : info.width; h = turned ? info.width : info.height;
+  } else {
+    file = `${n}.jpg`;
+    const out = await sharp(input).rotate().flatten({ background: '#000000' }).jpeg({ quality: 95, mozjpeg: true }).toFile(path.join(dest, file));
+    w = out.width; h = out.height;
+  }
+  const size = fs.statSync(path.join(dest, file)).size;
+  if (size > BIG) console.warn(`Note: ${f} is ${(size / 1048576).toFixed(1)} MB. Full-size files this large make the page slow to load; consider a smaller export.`);
   const thumb = await sharp(input).rotate().flatten({ background: '#000000' })
     .resize({ width: 700, withoutEnlargement: true })
     .jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(dest, `${n}-t.jpg`));
-  images.push({ file: `${n}.jpg`, w: full.width, h: full.height, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, alt: '' });
+  images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, alt: '' });
 }
 
 fs.writeFileSync(path.join(dest, 'issue.json'), JSON.stringify({ year, week, hero, images }, null, 2) + '\n');
