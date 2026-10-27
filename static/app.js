@@ -44,7 +44,16 @@
     p.menu.hidden = false;
     var h = p.menu.offsetHeight + 'px';
     nav.style.setProperty('--menu-h', h);
-    if (p.host) { p.host.style.setProperty('--menu-h', h); p.host.classList.add('menu-open'); }
+    if (p.host) {
+      p.host.style.setProperty('--menu-h', h);
+      // Geometry for the single frosted layer behind the bar + menu (see style.css): how far it extends below the band,
+      // and the menu column's left edge and width in px.
+      var br = p.host.getBoundingClientRect(), mr = p.menu.getBoundingClientRect();
+      p.host.style.setProperty('--menu-extra', Math.max(0, Math.round((mr.bottom + 34) - (br.bottom + 8))) + 'px');
+      p.host.style.setProperty('--patch-l', Math.round(mr.left - 26) + 'px');
+      p.host.style.setProperty('--patch-w', Math.round(mr.width + 52) + 'px');
+      p.host.classList.add('menu-open');
+    }
     nav.classList.add('open');
     p.btn.setAttribute('aria-expanded', 'true');
   }

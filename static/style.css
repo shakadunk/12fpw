@@ -165,6 +165,30 @@ html[data-view="calendar"] .view-calendar { display: block; }
   mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 22px), transparent 100%), linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
   mask-composite: intersect;
 }
+/* ONE continuous element: when the menu is open, the bar's own frosted layer is extended downward under the menu
+   column. Its mask is the band UNIONED with a feathered rectangle under the menu, so there is a single blur and a
+   single tint, with no overlap and therefore no seam. app.js sets --menu-extra (how far the layer extends below the
+   band, in px) and --patch-l / --patch-w (the menu column's left edge and width, in px). Browsers without mask
+   compositing keep the separate patch above. */
+@supports ((mask-composite: add) or (-webkit-mask-composite: source-over)) {
+  .slimbar .nav-menu::after { content: none; }
+  .slimbar.menu-open::before {
+    bottom: calc(-8px - var(--menu-extra, 0px));
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%),
+                        linear-gradient(to bottom, #000 0, #000 calc(100% - 22px), transparent 100%),
+                        linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%),
+                linear-gradient(to bottom, #000 0, #000 calc(100% - 22px), transparent 100%),
+                linear-gradient(to right, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+    -webkit-mask-size: 100% calc(100% - var(--menu-extra, 0px)), var(--patch-w, 0px) 100%, var(--patch-w, 0px) 100%;
+    mask-size: 100% calc(100% - var(--menu-extra, 0px)), var(--patch-w, 0px) 100%, var(--patch-w, 0px) 100%;
+    -webkit-mask-position: 0 0, var(--patch-l, 0px) 0, var(--patch-l, 0px) 0;
+    mask-position: 0 0, var(--patch-l, 0px) 0, var(--patch-l, 0px) 0;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-composite: source-over, source-in, source-over;
+    mask-composite: add, intersect, add;
+  }
+}
 .slim-name { white-space: nowrap; pointer-events: auto; color: inherit; }
 .slim-grp { position: relative; display: flex; align-items: baseline; gap: 1.5rem; pointer-events: auto; }
 @media (prefers-reduced-motion: no-preference) {

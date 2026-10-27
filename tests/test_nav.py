@@ -128,15 +128,19 @@ try:
         page.click("#slim-btn")
         check("bar: ARCHIVE opens SCROLL / GRID / CALENDAR under it", [t.strip().lower() for t in page.locator("#slim-menu a").all_inner_texts()] == ["scroll", "grid", "calendar"] and page.is_visible("#slim-menu"))
         page.wait_for_timeout(300)
-        cov = page.evaluate("(()=>{const g=document.getElementById('slimbar');const c=getComputedStyle(g,'::before');const m=document.getElementById('slim-menu');const mr=m.getBoundingClientRect();const pa=getComputedStyle(m,'::after');return {bandDepth:-parseFloat(c.bottom), bandH:g.getBoundingClientRect().height, bandBottom:g.getBoundingClientRect().bottom-parseFloat(c.bottom), patchBlur:(pa.backdropFilter||pa.webkitBackdropFilter), patchTint:pa.backgroundColor, patchBottom:mr.bottom-parseFloat(pa.bottom), patchTop:mr.top+parseFloat(pa.top), patchLeft:mr.left+parseFloat(pa.left), patchRight:mr.right-parseFloat(pa.right), menuL:mr.left, menuR:mr.right, menuBottom:mr.bottom, innerW:innerWidth}})()")
-        check("bar: the band keeps its single depth when the menu opens", cov["bandDepth"] == 8 and cov["bandH"] < 42 and cov["bandBottom"] < 70)
-        check("bar: a deeper frosted patch sits behind the open menu with the same blur and tint as the band", cov["patchBlur"] == page.evaluate("(getComputedStyle(document.getElementById('slimbar'),'::before').backdropFilter||getComputedStyle(document.getElementById('slimbar'),'::before').webkitBackdropFilter)") and cov["patchTint"] == page.evaluate("getComputedStyle(document.getElementById('slimbar'),'::before').backgroundColor") == "rgba(0, 0, 0, 0.3)" and cov["patchBottom"] >= cov["menuBottom"] + 15)
-        check("bar: the patch covers only the menu column (not the whole width)", cov["patchRight"] - cov["patchLeft"] < 240 and cov["patchLeft"] > cov["innerW"] / 2)
-        check("bar: the patch fades in from the band above it (no hard seam)", cov["patchTop"] < cov["bandBottom"] + 4)
+        cov = page.evaluate("""() => { const g=document.getElementById('slimbar'); const c=getComputedStyle(g,'::before'); const m=document.getElementById('slim-menu'); const mr=m.getBoundingClientRect(); const gr=g.getBoundingClientRect();
+          const mi=(c.maskImage||c.webkitMaskImage||''); const ms=(c.maskSize||c.webkitMaskSize||''); const mc=(c.maskComposite||c.webkitMaskComposite||'');
+          return {open:g.classList.contains('menu-open'), layerBottom: gr.bottom-parseFloat(c.bottom), menuBottom: mr.bottom, bandH: gr.height, blur:(c.backdropFilter||c.webkitBackdropFilter), tint:c.backgroundColor, layers:(mi.match(/linear-gradient/g)||[]).length, mask:mc, size:ms,
+                  afterContent:getComputedStyle(m,'::after').content, afterBlur:(getComputedStyle(m,'::after').backdropFilter||getComputedStyle(m,'::after').webkitBackdropFilter||'none'),
+                  pl:parseFloat(g.style.getPropertyValue('--patch-l')), pw:parseFloat(g.style.getPropertyValue('--patch-w')), innerW:innerWidth, menuL:mr.left, menuR:mr.right} }""")
+        check("bar: the band keeps its single depth when the menu opens", cov["bandH"] < 42)
+        check("bar: ONE frosted layer covers the bar and extends down past the menu (no second layer)", cov["open"] and cov["layerBottom"] >= cov["menuBottom"] + 15 and cov["afterContent"] in ("none", "normal"))
+        check("bar: that layer is the band's own blur and tint (30%) with a union mask (band + menu column)", "blur(14px)" in cov["blur"] and cov["tint"] == "rgba(0, 0, 0, 0.3)" and cov["layers"] == 3 and "add" in cov["mask"] and "intersect" in cov["mask"])
+        check("bar: the menu column is what extends (not the whole width)", cov["pw"] < 240 and cov["pl"] > cov["innerW"] / 2 - 100 and cov["pl"] <= cov["menuL"] and cov["pl"] + cov["pw"] >= cov["menuR"])
         check("bar: menu text is fully on screen", page.evaluate("(()=>{const r=document.getElementById('slim-menu').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"))
         page.screenshot(path=f"{out}/nav-bar-open.png", clip={"x": 0, "y": 0, "width": 1440, "height": 400})
         page.keyboard.press("Escape")
-        check("bar: Esc closes the menu and the deeper patch goes away", not page.is_visible("#slim-menu") and not page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
+        check("bar: Esc closes the menu and the layer shrinks back to the band", not page.is_visible("#slim-menu") and not page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
         page.click("#slim-btn"); page.mouse.move(5, 500); page.wait_for_timeout(500)
         page.evaluate("window.scrollBy(0,300)"); page.wait_for_timeout(400)
         check("bar: scrolling down does not hide it at once (menu still open too)", bar_visible(page) and page.is_visible("#slim-menu"))
@@ -216,7 +220,7 @@ try:
         check("bar stays on screen after toggling the theme", bar_visible(page))
         page.screenshot(path=f"{out}/nav-bar-light.png", clip={"x": 0, "y": 0, "width": 1440, "height": 200})
         page.click("#slim-btn"); page.wait_for_timeout(300)
-        check("light theme: the patch behind the menu has the same tint as the band (30% white), and the labels are dark", page.evaluate("getComputedStyle(document.getElementById('slimbar'),'::before').backgroundColor") == "rgba(255, 255, 255, 0.3)" and page.evaluate("getComputedStyle(document.getElementById('slim-menu'),'::after').backgroundColor") == "rgba(255, 255, 255, 0.3)" and page.evaluate("getComputedStyle(document.querySelector('#slim-menu a')).color") == "rgb(17, 17, 17)")
+        check("light theme: the menu shares the band's single layer (30% white), and the labels are dark", page.evaluate("getComputedStyle(document.getElementById('slimbar'),'::before').backgroundColor") == "rgba(255, 255, 255, 0.3)" and page.evaluate("getComputedStyle(document.getElementById('slim-menu'),'::after').content") in ("none", "normal") and page.evaluate("getComputedStyle(document.querySelector('#slim-menu a')).color") == "rgb(17, 17, 17)")
         page.keyboard.press("Escape")
         page.click("#slim-theme"); page.wait_for_timeout(100)
         page.goto(B + "/2024/week-20/"); page.reload()
@@ -249,9 +253,9 @@ try:
         # hover in the scroll-up bar
         page.goto(B + "/archive/#scroll"); page.reload(); page.wait_for_load_state("networkidle"); page.mouse.move(5, 300); up(page, 3000)
         page.hover("#slim-btn"); page.wait_for_timeout(450)
-        check("hover (bar): resting on ARCHIVE in the bar opens the menu with its deeper patch", page.is_visible("#slim-menu") and page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
+        check("hover (bar): resting on ARCHIVE in the bar opens the menu (the layer extends under it)", page.is_visible("#slim-menu") and page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
         page.mouse.move(700, 700); page.wait_for_timeout(700)
-        check("hover (bar): the menu and its patch close after the pointer leaves", not page.is_visible("#slim-menu") and not page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
+        check("hover (bar): the menu closes and the layer shrinks back after the pointer leaves", not page.is_visible("#slim-menu") and not page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
 
         # ================= post pages =================
         page.goto(B + "/2024/week-20/"); page.wait_for_load_state("networkidle")
