@@ -119,7 +119,7 @@ function layout({ title, description, path: urlPath, body, ogImage, page }) {
   const desc = description || cfg.blurb || cfg.name;
   const abs = (u) => (cfg.siteUrl ? cfg.siteUrl + u : u);
   return `<!doctype html>
-<html lang="en" data-theme="dark" data-view="${cfg.defaultView}" data-gridmode="weekly">
+<html lang="en" data-theme="dark" data-view="${cfg.defaultView}" data-gridmode="full">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -210,7 +210,7 @@ ${p.images.map((im, i) => `      <li><a href="${p.url}#img-${p.year}-${p.week}-$
 
 function archivePage(posts) {
   const full = `<div class="fullgrid">\n${posts.map(fullWeek).join('\n')}\n</div>`;
-  const toggle = `<div class="grid-mode" role="group" aria-label="Grid layout"><button type="button" class="link-btn" data-mode="weekly" aria-pressed="true">Weekly</button><button type="button" class="link-btn" data-mode="full" aria-pressed="false">Full</button></div>`;
+  const toggle = `<div class="grid-mode" role="group" aria-label="Grid layout"><button type="button" class="link-btn" data-mode="full" aria-pressed="true">Full</button><button type="button" class="link-btn" data-mode="weekly" aria-pressed="false">Weekly</button></div>`;
   const grid = `<ul class="grid">\n${posts.map(thumbCell).join('\n')}\n  </ul>`;
   const months = [];
   for (const p of posts) {

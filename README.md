@@ -17,7 +17,7 @@ tests/                browser tests (Python + Playwright): `python3 tests/test_n
 ## What is in this version
 
 - **SCROLL:** newest first, infinite scroll. Each post is its text, then its 12 images, with a thin rule between posts.
-- **GRID:** a **WEEKLY / FULL** toggle. WEEKLY is a 3-column grid of one hero image per post, labelled with its week number (click to open the post). FULL shows every image, newest week first, one week per row (12 across on desktop, 3 across and 4 rows per week on phones); click an image to jump to it in its week's page.
+- **GRID:** a **FULL / WEEKLY** toggle (FULL is the default). WEEKLY is a 3-column grid of one hero image per post, labelled with its week number (click to open the post). FULL shows every image, newest week first, one week per row (12 across on desktop, 3 across and 4 rows per week on phones); click an image to jump to it in its week's page.
 - **CALENDAR:** the same grid, split into months by horizontal dividers.
 - **Header:** the name as plain text (**12 FRAMES PER WEEK**, or 12FPW on phones, always a link to the home page), **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on desktop it opens when you hover over it (click pins it open), on phones you tap. On the archive it switches the view in place, anywhere else it opens the archive in that view.
 - **Wide desktop screens (1200px and up):** LIGHT/DARK stands alone in the bottom-left corner; ARCHIVE is the far-right item in the header and in the scroll-up bar (TOP appears to its left in the bar), so it never moves. Narrower screens keep ARCHIVE, TOP and LIGHT together.

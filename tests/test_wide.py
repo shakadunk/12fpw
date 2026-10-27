@@ -63,9 +63,9 @@ try:
             pg.keyboard.press("Escape")
             # archive page
             pg.goto(B + "/archive/#grid"); pg.wait_for_load_state("networkidle")
-            gl = pg.evaluate("document.querySelector('.view-grid .grid, .wide').getBoundingClientRect().left")
+            gl = pg.evaluate("document.querySelector('.fg-label').getBoundingClientRect().left")
             cr2 = rect(pg, "#corner-theme")
-            check(w + "corner toggle clears the archive grid too", cr2["r"] < gl - 8)
+            check(w + "corner toggle clears the archive grid (FULL is the default view) too", cr2["r"] < gl - 8)
             ctx.close()
 
         # narrower than 1200: the older layout

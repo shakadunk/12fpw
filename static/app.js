@@ -122,7 +122,7 @@
   // ----- GRID view: WEEKLY / FULL toggle (the choice is remembered) -----
   var modeBtns = document.querySelectorAll('.grid-mode [data-mode]');
   function syncMode() {
-    var m = root.dataset.gridmode === 'full' ? 'full' : 'weekly';
+    var m = root.dataset.gridmode === 'weekly' ? 'weekly' : 'full';
     modeBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'); });
   }
   modeBtns.forEach(function (b) {
