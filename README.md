@@ -45,7 +45,7 @@ npm run add-post -- ~/Desktop/week-3 --year 2025 --week 3 --hero 4 --push
 
 - The hero (thumbnail in Grid and Calendar) is always image 1. `--hero N` still exists but is not used.
 - `--push` commits and pushes, and Vercel redeploys in about a minute. Leave it off to look at the result first.
-- Images are kept at FULL SIZE (copied byte for byte; HEIC/TIFF become a high-quality JPEG) and a 700px thumbnail is made for the grid. Each image links to a Google reverse-image search. A paragraph wrapped in asterisks in `text.txt` shows in italic grey.
+- Images are kept at FULL SIZE (copied byte for byte; HEIC/TIFF become a high-quality JPEG) and a 700px thumbnail is made for the grid. Each image links to a Google reverse-image search. A paragraph wrapped in asterisks in `text.txt` shows in italic grey, and `[words](https://address)` makes a link (underlined, slightly heavier). `python3 scripts/clipping_to_text.py clip.textClipping > text.txt` converts a Mac text clipping, keeping its links.
 - A post's date comes from its week: Calendar uses the Thursday of that ISO week, so Week 1 of 2025 files under January 2025. To use the real send date, add `"date": "2025-01-09"` to the post's `issue.json`.
 
 ## Put it online

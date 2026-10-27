@@ -79,7 +79,9 @@ function loadPosts() {
 const paragraphs = (text) => text.split(/\n{2,}/).filter(Boolean).map((p) => {
   const pre = /^\*[^*]([\s\S]*[^*])?\*$/.test(p.trim());
   const body = pre ? p.trim().slice(1, -1) : p;
-  return `<p${pre ? ' class="preface"' : ''}>${esc(body).replace(/\n/g, '<br>')}</p>`;
+  // [words](https://address) becomes a link: underlined, a touch heavier, opens in a new tab (see .text-link in style.css)
+  const html = esc(body).replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) => `<a class="text-link" href="${url}" target="_blank" rel="noopener">${label}</a>`);
+  return `<p${pre ? ' class="preface"' : ''}>${html.replace(/\n/g, '<br>')}</p>`;
 }).join('\n');
 // Each image links to a Google reverse-image search (Google Lens) of that image, so viewers can trace where it came from.
 // It needs the image's public address, so it only appears once the site's address is known (see siteUrl above).
