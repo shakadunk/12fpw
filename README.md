@@ -25,7 +25,7 @@ tests/                browser tests (Python + Playwright): `python3 tests/test_n
 - **Home page** = the most recent post. An older week opened from the archive has a back-to-archive link at the top.
 - The home page footer shows only today's date at the bottom right (live, from the visitor's device), as 26 OCTOBER 2026.
 - Post pages live at `/2024/week-3/`.
-- A Week 3 post with real text, plus 11 demo posts that reuse the same 12 images. **Delete every folder in `issues/` before the real launch.**
+- Real posts only: the placeholder demo posts were deleted on 2026-10-27 once the backfill started (2023 Weeks 1 to 14 so far).
 - The **signup form is parked**: it is not shown on any page right now (a new spot is still to be chosen), and it is not connected to a mailing service yet. See `docs/SPEC.md` for the plan (Resend).
 
 ## Run it locally

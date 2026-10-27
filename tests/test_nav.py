@@ -43,8 +43,8 @@ try:
 
         # ================= HOME = most recent post =================
         page.goto(B + "/"); page.wait_for_load_state("networkidle")
-        check("home: shows the most recent post (Week 2, 2025) with an h1", "Week 2" in page.inner_text("h1") and "2025" in page.inner_text("h1"))
-        check("home: 12 images and the post text", page.locator("figure img").count() == 12 and "DEMO POST" in page.inner_text(".text"))
+        check("home: shows the most recent post with an h1", f"Week {newest_wk[1]}" in page.inner_text("h1") and str(newest_wk[0]) in page.inner_text("h1"))
+        check("home: 12 images and the post text", page.locator("figure img").count() == 12 and len(page.inner_text(".text")) > 40)
         check("home: no back button", page.locator(".back").count() == 0)
         check("home: header has ARCHIVE and LIGHT, no SUBSCRIBE", labels(page, ".site-header nav") == ["ARCHIVE", "LIGHT"] and "SUBSCRIBE" not in page.locator(".site-header").text_content().upper())
         check("home: no signup form or email field on the page", page.locator("#subscribe-form").count() == 0 and page.locator("input[type=email]").count() == 0)
@@ -66,10 +66,10 @@ try:
         check("header: no logo image is shipped in the built site", not os.path.exists(os.path.join(proj, "dist", "logo.png")))
         page.goto(B + "/archive/#grid"); page.reload(); page.wait_for_load_state("networkidle")
         check("header (archive): same text name, linking home", page.locator(".site-header img").count() == 0 and page.get_attribute("#site-name", "href") == "/")
-        page.goto(B + "/2024/week-20/"); page.wait_for_load_state("networkidle")
+        page.goto(B + "/2023/week-8/"); page.wait_for_load_state("networkidle")
         check("header (older week): same text name, linking home", page.locator(".site-header img").count() == 0 and page.get_attribute("#site-name", "href") == "/")
         page.click("#site-name"); page.wait_for_load_state("networkidle")
-        check("header: clicking the name goes to the home page (latest post)", page.url.rstrip("/") == B and "Week 2" in page.inner_text("h1"))
+        check("header: clicking the name goes to the home page (latest post)", page.url.rstrip("/") == B and f"Week {newest_wk[1]}" in page.inner_text("h1"))
         page.goto(B + "/nope/"); check("404 page: header has the text name too", page.locator("#site-name").count() == 1 and page.locator(".site-header img").count() == 0); errors.clear()
         page.goto(B + "/"); page.wait_for_load_state("networkidle")
 
@@ -238,11 +238,11 @@ try:
         check("light theme: the menu shares the band's single layer (30% white), and the labels are dark", page.evaluate("getComputedStyle(document.getElementById('slimbar'),'::before').backgroundColor") == "rgba(255, 255, 255, 0.3)" and page.evaluate("getComputedStyle(document.getElementById('slim-menu'),'::after').content") in ("none", "normal") and page.evaluate("getComputedStyle(document.querySelector('#slim-menu a')).color") == "rgb(17, 17, 17)")
         page.keyboard.press("Escape")
         page.click("#slim-theme"); page.wait_for_timeout(100)
-        page.goto(B + "/2024/week-20/"); page.reload()
+        page.goto(B + "/2023/week-8/"); page.reload()
         check("the theme choice carries to other pages", page.evaluate("document.documentElement.dataset.theme") == "dark")
 
         # ================= hover (desktop mouse) =================
-        page.goto(B + "/2024/week-20/"); page.wait_for_load_state("networkidle"); page.mouse.move(5, 300)
+        page.goto(B + "/2023/week-8/"); page.wait_for_load_state("networkidle"); page.mouse.move(5, 300)
         page.hover("#nav-btn"); page.wait_for_timeout(300)
         check("hover: resting on ARCHIVE opens the menu", page.is_visible("#nav-menu") and page.get_attribute("#nav-btn", "aria-expanded") == "true")
         page.hover('#nav-menu a[data-view="grid"]'); page.wait_for_timeout(450)
@@ -261,7 +261,7 @@ try:
         page.hover("#nav-btn"); page.wait_for_timeout(300); page.hover('#nav-menu a[data-view="grid"]'); page.click('#nav-menu a[data-view="grid"]'); page.wait_for_timeout(300)
         check("hover: on the archive page, picking a view switches in place and closes the menu", page.is_visible(".view-grid") and not page.is_visible("#nav-menu"))
         # keyboard still works with no mouse involved
-        page.goto(B + "/2024/week-20/"); page.mouse.move(5, 300); page.focus("#nav-btn"); page.keyboard.press("Enter")
+        page.goto(B + "/2023/week-8/"); page.mouse.move(5, 300); page.focus("#nav-btn"); page.keyboard.press("Enter")
         check("keyboard: Enter on ARCHIVE opens the menu", page.is_visible("#nav-menu"))
         page.keyboard.press("Escape")
         check("keyboard: Esc closes it", not page.is_visible("#nav-menu"))
@@ -273,12 +273,12 @@ try:
         check("hover (bar): the menu closes and the layer shrinks back after the pointer leaves", not page.is_visible("#slim-menu") and not page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
 
         # ================= post pages =================
-        page.goto(B + "/2024/week-20/"); page.wait_for_load_state("networkidle")
+        page.goto(B + "/2023/week-8/"); page.wait_for_load_state("networkidle")
         check("older week: back button to the archive is at the top", page.locator(".back a").count() == 1 and page.get_attribute(".back a", "href") == "/archive/")
         check("older week: back button sits above the Week heading", page.evaluate("document.querySelector('.back').getBoundingClientRect().top < document.querySelector('h1').getBoundingClientRect().top"))
         page.click(".back a"); page.wait_for_load_state("networkidle")
         check("older week: back button returns to the archive", page.url.endswith("/archive/") or "/archive/#" in page.url)
-        page.goto(B + "/2024/week-20/"); page.wait_for_load_state("networkidle")
+        page.goto(B + "/2023/week-8/"); page.wait_for_load_state("networkidle")
         check("older week: header is logo + ARCHIVE + LIGHT only", labels(page, ".site-header nav") == ["ARCHIVE", "LIGHT"])
         up(page, 1800)
         check("older week: the bar appears on scroll up", bar_visible(page))

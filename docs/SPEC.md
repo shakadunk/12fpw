@@ -4,7 +4,7 @@ Replaces the old Mailchimp-based plan. The site and the email come from the same
 Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailchimp archive).
 
 ## Status
-- DONE (live on Vercel at 12fpw.vercel.app; the first real posts, 2023 Weeks 1 to 14 are in, mixed with the 12 demo posts until those are deleted): black site with SCROLL, GRID and CALENDAR views, home page = latest post, post pages, light/dark toggle, ARCHIVE dropdown in the header, scroll-up bar (ARCHIVE / TOP / LIGHT) on every page, signup form parked (hidden everywhere until a new spot is chosen), `scripts/add-post.mjs` to make a post from 12 images + text. Demo posts (2024-w03 to 2025-w02) reuse 12 sample images; delete them before launch.
+- DONE (live on Vercel at 12fpw.vercel.app; the first real posts, 2023 Weeks 1 to 14, are in; the 12 placeholder demo posts were deleted on 2026-10-27, so only real posts remain): black site with SCROLL, GRID and CALENDAR views, home page = latest post, post pages, light/dark toggle, ARCHIVE dropdown in the header, scroll-up bar (ARCHIVE / TOP / LIGHT) on every page, signup form parked (hidden everywhere until a new spot is chosen), `scripts/add-post.mjs` to make a post from 12 images + text.
 - WORKFLOW: Shaka describes a change, Claude confirms details, edits, tests, and pushes to the GitHub repo; Vercel redeploys automatically. Claude can push to shakadunk/12fpw (the Claude GitHub App is installed on the repo).
 - TO BUILD: backfill of the old posts, private upload page, email rendering, sending via Resend, signup endpoint, moving 12fpw.com to Vercel.
 
@@ -76,7 +76,7 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 ## Still open
 - Revisit the scroll-up bar (see above) once the backfill is in
 - Where the signup form goes (parked; hidden on every page until Shaka picks a spot)
-- Any skipped weeks in 2024 and early 2025
+- Any skipped weeks in 2023 and early 2024
 - How to get the 60 posts' content out (PDF per post, or original files)
 - Approval UX: preview link plus an Approve button on the upload page
 - Logo: the site now uses plain text only (no logo image). Decide whether the email keeps the old stacked logo, uses the same plain text, or gets a new mark

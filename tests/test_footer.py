@@ -41,7 +41,7 @@ try:
         check("home: with the real clock it shows the device's date", page3.inner_text("#today").strip().lower() == expected)
 
         # other pages keep the original footer
-        for url in ("/archive/", "/2024/week-3/"):
+        for url in ("/archive/", "/2023/week-3/"):
             page3.goto(B + url); page3.wait_for_load_state("networkidle")
             f = page3.locator("footer").text_content()
             check(f"{url}: footer keeps the name + Archive link (Subscribe link removed with the signup form)", "12 Frames Per Week" in f and "Archive" in f and "Subscribe" not in f and page3.locator("#today").count() == 0)
