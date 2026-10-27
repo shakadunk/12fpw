@@ -1,4 +1,4 @@
-# 12 Frames Per Week: site and sending pipeline spec (updated 2026-10-26)
+# 12 Frames Per Week: site and sending pipeline spec (updated 2026-10-27)
 
 Replaces the old Mailchimp-based plan. The site and the email come from the same post data.
 Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailchimp archive).
