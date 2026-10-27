@@ -4,7 +4,7 @@ Replaces the old Mailchimp-based plan. The site and the email come from the same
 Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailchimp archive).
 
 ## Status
-- DONE (demo, live on Vercel at 12fpw.vercel.app): black site with SCROLL, GRID and CALENDAR views, post pages, signup form (not connected), light/dark toggle, slim VIEW/TOP bar in the archive, `scripts/add-post.mjs` to make a post from 12 images + text. Demo posts reuse 12 sample images; delete them before launch.
+- DONE (demo, live on Vercel at 12fpw.vercel.app): black site with SCROLL, GRID and CALENDAR views, home page = latest post, post pages, light/dark toggle, ARCHIVE dropdown in the header, scroll-up bar (ARCHIVE / TOP / LIGHT) on every page, signup form parked (hidden everywhere until a new spot is chosen), `scripts/add-post.mjs` to make a post from 12 images + text. Demo posts reuse 12 sample images; delete them before launch.
 - WORKFLOW: Shaka describes a change, Claude confirms details, edits, tests, and pushes to the GitHub repo; Vercel redeploys automatically. Claude can push to shakadunk/12fpw (the Claude GitHub App is installed on the repo).
 - TO BUILD: backfill of the old posts, private upload page, email rendering, sending via Resend, signup endpoint, moving 12fpw.com to Vercel.
 
@@ -23,7 +23,9 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - SCROLL: newest first, infinite scroll, thin horizontal rule between posts.
 - GRID: Instagram-style grid of hero images (3 columns, square crops), each labelled with its week number. Click opens the post.
 - CALENDAR: the GRID, split into months with horizontal dividers.
-- Footer: on the home page the footer is just today's date at the bottom right (e.g. 26 OCTOBER 2026, day number always two digits), shown in small uppercase type and filled in live from the visitor's device, so it rolls over at midnight if the page stays open. No copyright line, because most of the images are not Shaka's. The archive and post pages keep the older footer (site name plus Archive / Subscribe links) for now.
+- Home page = the most recent post (same layout as a post page, no back button). Older weeks opened from the archive have a "← Archive" back link at the top, above the Week heading.
+- Header: logo at the left; at the right ARCHIVE and LIGHT/DARK. SUBSCRIBE was removed (Shaka will find another place for the signup form). ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on the archive page it switches the view in place, on any other page it opens the archive in that view. The archive page has no title row and no inline view buttons any more (the "ARCHIVE (12)" label was removed).
+- Footer: on the home page the footer is just today's date at the bottom right (e.g. 26 OCTOBER 2026, day number always two digits), shown in small uppercase type and filled in live from the visitor's device, so it rolls over at midnight if the page stays open. No copyright line, because most of the images are not Shaka's. The archive and post pages keep the older footer (site name plus an Archive link; the Subscribe link was removed along with the parked signup form).
 - A post's calendar month comes from the Thursday of its ISO week (Week 1 of 2025 starts Dec 30, 2024 but files under January 2025). A post's issue.json can carry a real "date" to override.
 
 ## Email
@@ -43,7 +45,7 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - Resend free plan: 3,000 emails/month, 100/day cap, can also receive email. Check audience and contact limits at setup.
 - Past 100 subscribers: upgrade or switch (Brevo free is 300/day with its branding; Amazon SES is about $0.16 per 1,000). Keep the sending code provider-agnostic.
 - Sending from 12fpw.com needs SPF/DKIM records.
-- The signup form adds people to the provider's list; the provider handles unsubscribe links.
+- The signup form (currently hidden everywhere) adds people to the provider's list; the provider handles unsubscribe links.
 
 ## Archive backfill (about 60 posts)
 - Week 1 was in 2024, and posts ran through the first few weeks of 2025.
@@ -56,15 +58,19 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - Uploads must go straight to storage, not through a serverless function: Vercel's per-request size limit (about 4.5 MB, to verify) is too small for 12 photos.
 - Source of truth is the GitHub repo (issues/<year>-w<week>/); Vercel redeploys on push. If the portal needs to publish without a git push, fall back to Vercel Blob with the site reading from it.
 - Shaka does not want to install Claude (Claude Code) on his work computer, so everything must run in the browser and on Vercel. The cloud sandbox cannot reach the npm registry, so the portal and sending code should use only what Node already includes, or be built so Vercel installs any packages at deploy time.
+- Browser tests live in tests/ (Python + Playwright; run `python3 tests/test_nav.py` and `python3 tests/test_footer.py` after building). They cover the header dropdown, the scroll-up bar, TOP, the three archive views, the home page, older weeks, phones, reduced motion, and the live date footer.
 - Repo size: about 2 MB per post after resizing, so 60 posts is roughly 120 MB. Commit only resized images.
 
-## Archive slim bar (added 2026-10-26)
-- In the archive (all three views), a slim text-only bar slides in when the reader scrolls up: VIEW on the left (opens a menu: Scroll / Grid / Calendar) and TOP on the right (glides back to the top and keeps the current view). TOP animates: ease in-out, about 0.45s for a short climb up to a cap of 1.4s for long ones, the bar stays on screen during the trip and hides on arrival, any wheel/touch/key/mouse press stops the glide where you are, and readers with reduced-motion settings get an instant jump. It hides again on scroll down and is not shown at the top of the page, on post pages or on the home page.
-- Look: see-through blurred bar (about 30% black tint in the dark theme, 30% white in the light theme, 14px blur) that stays slim (about 37px) and feathers out over its last ~18px, so it dissolves into the photo instead of ending in a hard edge. On desktop, VIEW and TOP sit about 520px apart (pulled in toward the middle); on phones they sit at the screen margins. The VIEW menu has no panel of its own: when it opens, the bar's see-through blurred area grows downward to hold it (one continuous block, feathered at the bottom), with the current view in full white and the others dimmed. In the light theme the tint is firmer (about 55%) while the menu is open so the labels stay readable.
-- REVISIT once the backfill starts: with 60+ posts, decide whether the bar should also appear on post pages or the home page, and whether the bar's behavior and size feel right.
+## Scroll-up bar (replaces the earlier VIEW / TOP archive bar; 2026-10-26)
+- On every page (home, archive, week pages): scrolling down hides the header and nothing replaces it; scrolling back up slides in a small text-only bar at the right: ARCHIVE, TOP, LIGHT/DARK (in that order, LIGHT in the same far-right spot as in the header). It hides again on scroll down and is not shown while the header is still on screen.
+- ARCHIVE in the bar drops down SCROLL / GRID / CALENDAR (current view in full white, the others dimmed), the same menu as in the header.
+- Look: no full-width strip. A soft frosted patch (about 30% black tint in the dark theme, 30% white in the light theme, 14px blur, feathered at the bottom and on its left edge) sits behind just the buttons, so it never smears the whole photo. When the menu is open the patch grows downward to hold it (one continuous block), and in the light theme the tint is firmer (about 55%) so the labels stay readable. The menu has no solid panel of its own. On wide screens the buttons sit in the black margin beside the photos.
+- TOP glides back to the top (ease in-out, about 0.45s for a short climb up to a cap of 1.4s), keeps the current view, any wheel/touch/key/mouse press stops the glide, reduced-motion readers get an instant jump.
+- REVISIT once the backfill starts: with 60+ posts, check that the bar's behavior and size feel right.
 
 ## Still open
-- Revisit the slim bar (see above) once the backfill is in
+- Revisit the scroll-up bar (see above) once the backfill is in
+- Where the signup form goes (parked; hidden on every page until Shaka picks a spot)
 - Any skipped weeks in 2024 and early 2025
 - How to get the 60 posts' content out (PDF per post, or original files)
 - Approval UX: preview link plus an Approve button on the upload page

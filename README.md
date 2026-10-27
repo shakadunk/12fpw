@@ -1,15 +1,16 @@
 # 12 Frames Per Week
 
-Static site for the weekly photo newsletter: a signup page, an archive with **Scroll / Grid / Calendar** views, and one page per weekly post. Black by default, with a light/dark toggle. The build has no dependencies and needs Node 20 or newer.
+Static site for the weekly photo newsletter: the home page is the most recent post, an archive has **Scroll / Grid / Calendar** views, and every week has its own page. Black by default, with a light/dark toggle. The build has no dependencies and needs Node 20 or newer.
 
 ```
 issues/2024-w03/      one folder per post: 12 images, thumbnails, issue.json, text.txt
-site.config.json      name, blurb, signup form URL
+site.config.json      name, blurb, signup form URL (the form is parked, see below)
 static/               style.css, app.js, logo.png, favicon (copied as they are)
 build.mjs             generates dist/ from the above
 scripts/add-post.mjs  makes a post from a folder of 12 images + a text file
 vercel.json           tells Vercel to run `npm run build` and serve dist/
 docs/SPEC.md          the full plan: design, sending, backfill, what is left to build
+tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py`
 ```
 
 ## What is in this version
@@ -17,11 +18,13 @@ docs/SPEC.md          the full plan: design, sending, backfill, what is left to 
 - **SCROLL:** newest first, infinite scroll. Each post is its text, then its 12 images, with a thin rule between posts.
 - **GRID:** a 3-column grid of one hero image per post, each labelled with its week number. Click one to open the post.
 - **CALENDAR:** the same grid, split into months by horizontal dividers.
-- A slim **VIEW / TOP** bar that slides in when you scroll up in the archive (VIEW opens a Scroll / Grid / Calendar menu; TOP glides back up through the page and keeps your view). It is a see-through, blurred strip with a feathered bottom edge, and the strip grows to hold the VIEW menu when it is open.
-- The home page footer shows only today's date at the bottom right (live, from the visitor's device).
-- **Post pages** at `/2024/week-3/`, the logo, and a home page with the signup form.
+- **Header:** the logo, **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on the archive it switches the view in place, anywhere else it opens the archive in that view.
+- **Scroll-up bar (every page):** scroll down and the header goes away; scroll back up and **ARCHIVE, TOP and LIGHT/DARK** slide in at the right. TOP glides back up through the page. It is a soft, frosted (blurred, see-through) patch with a feathered edge that grows to hold the ARCHIVE menu when it is open.
+- **Home page** = the most recent post. An older week opened from the archive has a back-to-archive link at the top.
+- The home page footer shows only today's date at the bottom right (live, from the visitor's device), as 26 OCTOBER 2026.
+- Post pages live at `/2024/week-3/`.
 - A Week 3 post with real text, plus 11 demo posts that reuse the same 12 images. **Delete every folder in `issues/` before the real launch.**
-- The signup form is not connected yet. See `docs/SPEC.md` for the plan (Resend).
+- The **signup form is parked**: it is not shown on any page right now (a new spot is still to be chosen), and it is not connected to a mailing service yet. See `docs/SPEC.md` for the plan (Resend).
 
 ## Run it locally
 

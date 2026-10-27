@@ -88,6 +88,16 @@ ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.im
 </article>`;
 }
 
+// ARCHIVE dropdown, used in the header and in the scroll-up bar. On the archive page JS switches the view in place;
+// everywhere else the links simply open the archive in that view.
+const VIEWS = ['scroll', 'grid', 'calendar'];
+const archiveMenu = (id, { current = false } = {}) => `<div class="nav-archive">
+      <button type="button" class="link-btn nav-archive-btn" id="${id}-btn" aria-haspopup="true" aria-expanded="false" aria-controls="${id}-menu"${current ? ' aria-current="page"' : ''}>Archive</button>
+      <ul class="nav-menu" id="${id}-menu" hidden>
+${VIEWS.map((v) => `        <li><a href="/archive/#${v}" data-view="${v}">${v[0].toUpperCase() + v.slice(1)}</a></li>`).join('\n')}
+      </ul>
+    </div>`;
+
 function layout({ title, description, path: urlPath, body, ogImage, page }) {
   const full = title ? `${title} — ${cfg.name}` : cfg.name;
   const desc = description || cfg.blurb || cfg.name;
@@ -119,11 +129,17 @@ if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;}catch(e){}})();
 <header class="site-header">
   <a class="logo" href="/" aria-label="${esc(cfg.name)}"><img src="/logo.png" alt="12 Frames Per Week" width="120" height="56"></a>
   <nav aria-label="Main">
-    <a href="/archive/"${page === 'archive' ? ' aria-current="page"' : ''}>Archive</a>
-    <a href="/#subscribe">Subscribe</a>
-    <button type="button" class="link-btn" id="theme-toggle"></button>
+    ${archiveMenu('nav', { current: page === 'archive' })}
+    <button type="button" class="link-btn theme-toggle" id="theme-toggle"></button>
   </nav>
 </header>
+<div class="slimbar" id="slimbar">
+  <div class="slim-grp" id="slim-grp">
+    ${archiveMenu('slim')}
+    <button type="button" class="link-btn" id="slim-top">Top</button>
+    <button type="button" class="link-btn theme-toggle" id="slim-theme"></button>
+  </div>
+</div>
 <main id="main">
 ${body}
 </main>
@@ -133,7 +149,7 @@ ${page === 'home'
 </footer>`
   : `<footer class="site-footer">
   <span>${esc(cfg.name)}</span>
-  <span><a href="/archive/">Archive</a><a href="/#subscribe">Subscribe</a></span>
+  <span><a href="/archive/">Archive</a></span>
 </footer>`}
 <script src="/app.js" defer></script>
 </body>
@@ -141,6 +157,7 @@ ${page === 'home'
 `;
 }
 
+// Parked: the signup form is not shown anywhere for now (Shaka is choosing a new spot for it).
 function subscribeForm() {
   const a = cfg.subscribeAction;
   return `<form class="signup" id="subscribe-form" action="${esc(a)}" method="post"${a ? '' : ' data-unconfigured'} novalidate>
@@ -151,19 +168,14 @@ function subscribeForm() {
   <p class="form-note" id="form-note" role="status"></p>`;
 }
 
+// The home page is the most recent post (same markup as a post page, minus the back button).
 function homePage(posts) {
   const p = posts[0];
-  const hero = p ? p.images[p.hero] : null;
-  return layout({
-    title: '', path: '/', page: 'home', ogImage: hero ? p.url + (hero.thumb || hero.file) : '',
-    body: `<section class="home" id="subscribe">
-  <p class="display">${esc(cfg.blurb)}</p>
-  ${subscribeForm()}
-</section>
-${p ? `<section class="latest" aria-label="Latest post">
-  <a href="${p.url}"><img src="${p.url}${esc(hero.file)}" alt="${esc(hero.alt || `Image ${p.hero + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(hero.w, hero.h)} fetchpriority="high" decoding="async"><span class="cap">Latest: ${esc(weekLabel(p))}, ${p.year}</span></a>
-</section>` : ''}`,
-  });
+  if (!p) {
+    return layout({ title: '', path: '/', page: 'home', body: `<div class="col"><p class="empty">No posts yet.</p></div>` });
+  }
+  const page = postPage(p, undefined, posts[1], { home: true });
+  return page;
 }
 
 const thumbCell = (p) => {
@@ -191,26 +203,7 @@ ${m.items.map(thumbCell).join('\n')}
   const empty = '<p class="empty">No posts yet.</p>';
   return layout({
     title: 'Archive', path: '/archive/', page: 'archive',
-    body: `<div class="archive-bar">
-  <h1 class="label">Archive <span class="mute">(${posts.length})</span></h1>
-  <div class="view-toggle" role="group" aria-label="Archive view">
-    <button type="button" class="link-btn" data-view="scroll">Scroll</button>
-    <button type="button" class="link-btn" data-view="grid">Grid</button>
-    <button type="button" class="link-btn" data-view="calendar">Calendar</button>
-  </div>
-</div>
-<div class="slimbar" id="slimbar">
-  <div class="slim-view">
-    <button type="button" class="link-btn" id="slim-view-btn" aria-haspopup="true" aria-expanded="false" aria-controls="slim-menu">View</button>
-    <ul class="slim-menu" id="slim-menu" hidden>
-      <li><button type="button" class="link-btn" data-view="scroll">Scroll</button></li>
-      <li><button type="button" class="link-btn" data-view="grid">Grid</button></li>
-      <li><button type="button" class="link-btn" data-view="calendar">Calendar</button></li>
-    </ul>
-  </div>
-  <button type="button" class="link-btn" id="slim-top">Top</button>
-</div>
-<div class="view view-scroll">
+    body: `<div class="view view-scroll">
   <div class="col" id="scroll-list" data-loaded="${first.length}">
 ${first.length ? first.map((p, i) => postArticle(p, { eager: i === 0 })).join('\n') : empty}
   </div>
@@ -227,13 +220,12 @@ ${first.length ? first.map((p, i) => postArticle(p, { eager: i === 0 })).join('\
   });
 }
 
-function postPage(p, newer, older) {
+function postPage(p, newer, older, { home = false } = {}) {
   const nav = (q, dir) => (q ? `<a href="${q.url}">${dir === 'older' ? '← ' : ''}${esc(weekLabel(q))}, ${q.year}${dir === 'newer' ? ' →' : ''}</a>` : '<span></span>');
   return layout({
-    title: `${weekLabel(p)}, ${p.year}`, path: p.url, page: 'post', ogImage: p.url + (p.images[p.hero].thumb || p.images[p.hero].file),
+    title: home ? '' : `${weekLabel(p)}, ${p.year}`, path: home ? '/' : p.url, page: home ? 'home' : 'post', ogImage: p.url + (p.images[p.hero].thumb || p.images[p.hero].file),
     body: `<div class="col">
-  <p class="back label"><a href="/archive/">← Archive</a></p>
-${postArticle(p, { eager: true, heading: 'h1' })}
+${home ? '' : '  <p class="back label"><a href="/archive/">← Archive</a></p>\n'}${postArticle(p, { eager: true, heading: 'h1' })}
   <nav class="pager label" aria-label="Posts">
     ${nav(older, 'older')}
     ${nav(newer, 'newer')}
@@ -262,4 +254,4 @@ posts.forEach((p, i) => {
 write('404.html', layout({ title: 'Not found', path: '/404', page: '404', body: `<section class="home"><p class="display">Not found.</p><p><a href="/">Home</a> &nbsp; <a href="/archive/">Archive</a></p></section>` }));
 
 console.log(`Built ${posts.length} post${posts.length === 1 ? '' : 's'}, ${posts.reduce((a, p) => a + p.images.length, 0)} images → dist/`);
-if (!cfg.subscribeAction) console.log('Note: subscribeAction is empty in site.config.json, so the signup form is not connected yet.');
+
