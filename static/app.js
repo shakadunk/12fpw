@@ -51,12 +51,13 @@
       var br = p.host.getBoundingClientRect(), mr = p.menu.getBoundingClientRect();
       // Outer edges of the frosted shape around the menu (it fades in over ~24px, so it is clearly visible about 18px in):
       // 41px left of the labels, 26px right of the menu, 30px below it.
-      var extra = Math.max(0, Math.round((mr.bottom + 30) - (br.bottom + 8)));
+      var BELOW = 12;                         // how far the bar's frosted layer reaches below the bar (keep in sync with style.css)
+      var extra = Math.max(0, Math.round((mr.bottom + 30) - (br.bottom + BELOW)));
       var pl = Math.round(mr.left - 41), pw = Math.round(mr.width + 67);
       p.host.style.setProperty('--menu-extra', extra + 'px');
       p.host.style.setProperty('--patch-l', pl + 'px');
       p.host.style.setProperty('--patch-w', pw + 'px');
-      p.host.style.setProperty('--menu-mask', menuMask(pw, br.height + 8 + extra, 40, 24));
+      p.host.style.setProperty('--menu-mask', menuMask(pw, br.height + BELOW + extra, 40, 24));
       p.host.classList.add('menu-open');
     }
     nav.classList.add('open');

@@ -150,7 +150,8 @@ html[data-view="calendar"] .view-calendar { display: block; }
    menu gets its own patch (same tint and blur) below. */
 .slimbar { position: fixed; top: 0; left: 0; right: 0; z-index: 50; display: flex; justify-content: space-between; align-items: baseline; padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px; font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; transform: translateY(calc(-100% - 12px)); visibility: hidden; pointer-events: none; }
 .slimbar.show { transform: translateY(0); visibility: visible; }
-.slimbar::before { left: 0; right: 0; top: 0; bottom: -8px;
+/* the frosting reaches 12px below the bar so the space under the letters matches the space above them (keep in sync with app.js) */
+.slimbar::before { left: 0; right: 0; top: 0; bottom: -12px;
   -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%);
   -webkit-mask-composite: initial; mask-composite: initial; }
@@ -175,7 +176,7 @@ html[data-view="calendar"] .view-calendar { display: block; }
   /* The shape under the menu is a soft ROUNDED rectangle (corner radius 40px, feather 24px). It is drawn once, as a single
      smooth image, by app.js (--menu-mask) so there are no joins or seams; this layer adds it to the band's own mask. */
   .slimbar.menu-open::before {
-    bottom: calc(-8px - var(--menu-extra, 0px));
+    bottom: calc(-12px - var(--menu-extra, 0px));
     -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%), var(--menu-mask);
     mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 18px), transparent 100%), var(--menu-mask);
     -webkit-mask-size: 100% calc(100% - var(--menu-extra, 0px)), var(--patch-w, 0px) 100%;

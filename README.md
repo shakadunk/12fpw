@@ -11,7 +11,7 @@ build.mjs             generates dist/ from the above
 scripts/add-post.mjs  makes a post from a folder of 12 images + a text file
 vercel.json           tells Vercel to run `npm run build` and serve dist/
 docs/SPEC.md          the full plan: design, sending, backfill, what is left to build
-tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py` (also test_footer.py, test_seam.py)
+tests/                browser tests (Python + Playwright): `python3 tests/test_nav.py` (also test_footer.py, test_seam.py, test_balance.py)
 ```
 
 ## What is in this version
