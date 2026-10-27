@@ -90,6 +90,8 @@ ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.im
 
 // ARCHIVE dropdown, used in the header and in the scroll-up bar. On the archive page JS switches the view in place;
 // everywhere else the links simply open the archive in that view.
+// The name as plain text, always a link to the home page: full name on tablets and desktops, short form on phones.
+const brandLink = (cls, id) => `<a class="${cls}" id="${id}" href="/" aria-label="${esc(cfg.name)}, home"><span class="long">${esc(cfg.name)}</span><span class="short">${esc(cfg.short || '12FPW')}</span></a>`;
 const VIEWS = ['scroll', 'grid', 'calendar'];
 const archiveMenu = (id, { current = false } = {}) => `<div class="nav-archive">
       <button type="button" class="link-btn nav-archive-btn" id="${id}-btn" aria-haspopup="true" aria-expanded="false" aria-controls="${id}-menu"${current ? ' aria-current="page"' : ''}>Archive</button>
@@ -127,14 +129,14 @@ if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;}catch(e){}})();
 <body data-page="${esc(page || '')}">
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
-  <a class="logo" href="/" aria-label="${esc(cfg.name)}"><img src="/logo.png" alt="12 Frames Per Week" width="120" height="56"></a>
+  ${brandLink('site-name', 'site-name')}
   <nav aria-label="Main">
     ${archiveMenu('nav', { current: page === 'archive' })}
     <button type="button" class="link-btn theme-toggle" id="theme-toggle"></button>
   </nav>
 </header>
 <div class="slimbar" id="slimbar">
-  <a class="slim-name" id="slim-name" href="/" aria-label="${esc(cfg.name)}, home"><span class="long">${esc(cfg.name)}</span><span class="short">${esc(cfg.short || '12FPW')}</span></a>
+  ${brandLink('slim-name', 'slim-name')}
   <div class="slim-grp" id="slim-grp">
     ${archiveMenu('slim')}
     <button type="button" class="link-btn" id="slim-top">Top</button>

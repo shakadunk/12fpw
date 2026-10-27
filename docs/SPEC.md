@@ -10,7 +10,7 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 
 ## Old template (from Week 3 and Week 4)
 - White background, one centered column about 600px wide, Helvetica/Arial.
-- Logo top-left: "12 / FRAMES / PER WEEK", bold, three stacked lines, with the "1" in 12 hanging to the left of FRAMES and PER (deliberate kerning). The logo was a PNG; a white-on-transparent copy is at static/logo.png. Open to a new logo.
+- Logo top-left: "12 / FRAMES / PER WEEK", bold, three stacked lines, with the "1" in 12 hanging to the left of FRAMES and PER (deliberate kerning). The logo was a PNG. The website no longer uses it (see Header below); white and black transparent copies are kept in assets/ in case they are wanted for the email or elsewhere.
 - Centered "Week N" in small gray with a short thin rule under it.
 - Body text about 15px, line height about 1.7, short paragraphs, then a sign-off such as "In blue," / "SD" on separate lines.
 - 12 images stacked at full column width, uncropped, no captions.
@@ -24,13 +24,13 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - GRID: Instagram-style grid of hero images (3 columns, square crops), each labelled with its week number. Click opens the post.
 - CALENDAR: the GRID, split into months with horizontal dividers.
 - Home page = the most recent post (same layout as a post page, no back button). Older weeks opened from the archive have a "← Archive" back link at the top, above the Week heading.
-- Header: logo at the left; at the right ARCHIVE and LIGHT/DARK. SUBSCRIBE was removed (Shaka will find another place for the signup form). ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on the archive page it switches the view in place, on any other page it opens the archive in that view. On desktop (mouse) the menu opens when the pointer rests on ARCHIVE (after about 80ms, so a pointer sweeping past does not open it) and closes about 250ms after the pointer leaves; clicking ARCHIVE while it is open from hovering pins it open until Esc or a click elsewhere. Touch devices tap to open, as before, and the keyboard (Enter / Esc) works. The archive page has no title row and no inline view buttons any more (the "ARCHIVE (12)" label was removed).
+- Header: at the left the site name as plain text, "12 FRAMES PER WEEK" in small all-caps, same size, spacing and colour as the nav (12FPW on phones, under 720px wide), always a link to the home page, on every page. The stacked logo image was removed from the site (2026-10-26). At the right ARCHIVE and LIGHT/DARK. SUBSCRIBE was removed (Shaka will find another place for the signup form). ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on the archive page it switches the view in place, on any other page it opens the archive in that view. On desktop (mouse) the menu opens when the pointer rests on ARCHIVE (after about 80ms, so a pointer sweeping past does not open it) and closes about 250ms after the pointer leaves; clicking ARCHIVE while it is open from hovering pins it open until Esc or a click elsewhere. Touch devices tap to open, as before, and the keyboard (Enter / Esc) works. The archive page has no title row and no inline view buttons any more (the "ARCHIVE (12)" label was removed).
 - Footer: on the home page the footer is just today's date at the bottom right (e.g. 26 OCTOBER 2026, day number always two digits), shown in small uppercase type and filled in live from the visitor's device, so it rolls over at midnight if the page stays open. No copyright line, because most of the images are not Shaka's. The archive and post pages keep the older footer (site name plus an Archive link; the Subscribe link was removed along with the parked signup form).
 - A post's calendar month comes from the Thursday of its ISO week (Week 1 of 2025 starts Dec 30, 2024 but files under January 2025). A post's issue.json can carry a real "date" to override.
 
 ## Email
 - Colorless on purpose: just text and images, no background or text colors set, so it follows each reader's light/dark setting.
-- A black PNG logo would vanish in dark mode, so use live text for the logo in the email (indent the other two lines to keep the hanging "1"), or switch to a new logo.
+- A black PNG logo would vanish in dark mode, so use live text for the name in the email, or switch to a new logo. The website now uses a plain-text name, so the same plain text works in the email too.
 - Footer keeps the postal address and an unsubscribe link (both legally required).
 
 ## Process
@@ -77,4 +77,4 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 - Any skipped weeks in 2024 and early 2025
 - How to get the 60 posts' content out (PDF per post, or original files)
 - Approval UX: preview link plus an Approve button on the upload page
-- Logo: keep the current one (hanging "1") or try new options
+- Logo: the site now uses plain text only (no logo image). Decide whether the email keeps the old stacked logo, uses the same plain text, or gets a new mark

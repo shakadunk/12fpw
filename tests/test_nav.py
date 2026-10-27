@@ -46,6 +46,27 @@ try:
         check("home: pager shows only an older link", page.locator(".pager a").count() == 1 and "week 1" in page.inner_text(".pager").lower())
         check("home: black background", page.evaluate("getComputedStyle(document.documentElement).backgroundColor") == "rgb(0, 0, 0)")
 
+        # ================= text name replaces the logo image =================
+        page.goto(B + "/"); page.wait_for_load_state("networkidle")
+        hn = page.evaluate("""() => { const a=document.getElementById('site-name'), cs=getComputedStyle(a.querySelector('.long')), nav=document.querySelector('.site-header nav .nav-archive-btn');
+          return {tag:a.tagName, href:a.getAttribute('href'), label:a.getAttribute('aria-label'), txt:a.querySelector('.long').textContent.trim(), up:cs.textTransform, size:cs.fontSize, ls:cs.letterSpacing, navSize:getComputedStyle(nav).fontSize, navLs:getComputedStyle(nav).letterSpacing,
+                  color:getComputedStyle(a).color, navColor:getComputedStyle(nav).color, und:getComputedStyle(a).textDecorationLine, imgs:document.querySelectorAll('.site-header img').length, left:a.getBoundingClientRect().left,
+                  nameBase:a.getBoundingClientRect().bottom, navBase:nav.getBoundingClientRect().bottom, short:a.querySelector('.short').getBoundingClientRect().width} }""")
+        check("header: the logo image is gone, the name is plain text", hn["imgs"] == 0 and hn["txt"] == "12 Frames Per Week" and hn["up"] == "uppercase")
+        check("header: the name is a link to the home page", hn["tag"] == "A" and hn["href"] == "/" and "home" in hn["label"].lower() and hn["und"] == "none")
+        check("header: the name matches the nav (same size, spacing and colour)", hn["size"] == hn["navSize"] == "12px" and hn["ls"] == hn["navLs"] and hn["color"] == hn["navColor"])
+        check("header: the name sits on the same line as ARCHIVE / LIGHT", abs(hn["nameBase"] - hn["navBase"]) < 2)
+        check("header: desktop shows the full name, not 12FPW", hn["short"] == 0)
+        check("header: no logo image is shipped in the built site", not os.path.exists(os.path.join(proj, "dist", "logo.png")))
+        page.goto(B + "/archive/#grid"); page.reload(); page.wait_for_load_state("networkidle")
+        check("header (archive): same text name, linking home", page.locator(".site-header img").count() == 0 and page.get_attribute("#site-name", "href") == "/")
+        page.goto(B + "/2024/week-20/"); page.wait_for_load_state("networkidle")
+        check("header (older week): same text name, linking home", page.locator(".site-header img").count() == 0 and page.get_attribute("#site-name", "href") == "/")
+        page.click("#site-name"); page.wait_for_load_state("networkidle")
+        check("header: clicking the name goes to the home page (latest post)", page.url.rstrip("/") == B and "Week 2" in page.inner_text("h1"))
+        page.goto(B + "/nope/"); check("404 page: header has the text name too", page.locator("#site-name").count() == 1 and page.locator(".site-header img").count() == 0); errors.clear()
+        page.goto(B + "/"); page.wait_for_load_state("networkidle")
+
         # ================= header ARCHIVE dropdown (on a post page) =================
         page.click("#nav-btn")
         items = [t.strip().lower() for t in page.locator("#nav-menu a").all_inner_texts()]
@@ -207,6 +228,8 @@ try:
         m.goto(B + "/"); m.wait_for_load_state("networkidle")
         check("phone: header fits (logo + ARCHIVE + LIGHT), no overflow", m.evaluate("document.documentElement.scrollWidth <= innerWidth") and labels(m, ".site-header nav") == ["ARCHIVE", "LIGHT"])
         m.tap("#nav-btn"); m.wait_for_timeout(300)
+        pw = m.evaluate("(()=>{const a=document.getElementById('site-name');const l=a.querySelector('.long').getBoundingClientRect().width, s=a.querySelector('.short'), r=s.getBoundingClientRect();return {long:l, txt:s.textContent.trim(), left:r.left, right:r.right, href:a.getAttribute('href'), navLeft:document.querySelector('.site-header nav').getBoundingClientRect().left}})()")
+        check("phone: the header shows 12FPW (long name hidden), still a link home", pw["long"] == 0 and pw["txt"] == "12FPW" and pw["href"] == "/" and pw["left"] < 40 and pw["right"] < pw["navLeft"] - 20)
         check("phone: header dropdown opens and fits", m.is_visible("#nav-menu") and m.evaluate("(()=>{const r=document.getElementById('nav-menu').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"))
         m.screenshot(path=f"{out}/nav-phone-header.png", clip={"x": 0, "y": 0, "width": 390, "height": 300})
         m.tap('#nav-menu a[data-view="grid"]'); m.wait_for_url("**/archive/#grid"); m.wait_for_load_state("networkidle")

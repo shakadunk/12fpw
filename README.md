@@ -5,7 +5,8 @@ Static site for the weekly photo newsletter: the home page is the most recent po
 ```
 issues/2024-w03/      one folder per post: 12 images, thumbnails, issue.json, text.txt
 site.config.json      name, blurb, signup form URL (the form is parked, see below)
-static/               style.css, app.js, logo.png, favicon (copied as they are)
+static/               style.css, app.js, favicon (copied as they are)
+assets/               logo-white.png, logo-black.png (the old stacked logo, not used by the site, kept for the email or print)
 build.mjs             generates dist/ from the above
 scripts/add-post.mjs  makes a post from a folder of 12 images + a text file
 vercel.json           tells Vercel to run `npm run build` and serve dist/
@@ -18,7 +19,7 @@ tests/                browser tests (Python + Playwright): `python3 tests/test_n
 - **SCROLL:** newest first, infinite scroll. Each post is its text, then its 12 images, with a thin rule between posts.
 - **GRID:** a 3-column grid of one hero image per post, each labelled with its week number. Click one to open the post.
 - **CALENDAR:** the same grid, split into months by horizontal dividers.
-- **Header:** the logo, **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on desktop it opens when you hover over it (click pins it open), on phones you tap. On the archive it switches the view in place, anywhere else it opens the archive in that view.
+- **Header:** the name as plain text (**12 FRAMES PER WEEK**, or 12FPW on phones, always a link to the home page), **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on desktop it opens when you hover over it (click pins it open), on phones you tap. On the archive it switches the view in place, anywhere else it opens the archive in that view.
 - **Scroll-up bar (every page):** scroll down and the header goes away; scroll back up and **ARCHIVE, TOP and LIGHT/DARK** slide in as one frosted (blurred, see-through) band across the top, feathered at its bottom edge: **12 FRAMES PER WEEK** at the left (a link home; 12FPW on phones), ARCHIVE / TOP / LIGHT at the right. TOP glides back up through the page, and a deeper frosted patch appears behind the ARCHIVE menu only while it is open.
 - **Home page** = the most recent post. An older week opened from the archive has a back-to-archive link at the top.
 - The home page footer shows only today's date at the bottom right (live, from the visitor's device), as 26 OCTOBER 2026.
