@@ -92,7 +92,7 @@ a:hover .cap { color: var(--fg); }
 .post figure img { width: 100%; background: var(--ph); }
 /* between posts in the Scroll view: the same gap above and below the thin rule (the last image's own bottom margin is dropped so the gap above the rule is not larger) */
 .post figure:last-child { margin-bottom: 0; }
-.post + .post { margin-top: 2.5rem; padding-top: 2.5rem; border-top: 1px solid var(--line); }
+.post + .post { margin-top: 2.5rem; padding-top: 17px; border-top: 1px solid var(--line); }   /* 17px puts the Week heading as far below the rule as the small underline is below the heading */
 .pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
 .pager a:hover { color: var(--fg); }
 
