@@ -117,7 +117,28 @@
     menu.addEventListener('click', function (e) { if (e.target.closest('[data-view]')) closeMenu(); });
     document.addEventListener('click', function (e) { if (!slim.contains(e.target)) closeMenu(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { closeMenu(); viewBtn.focus(); } });
-    topBtn.addEventListener('click', function () { window.scrollTo(0, 0); hideSlim(); });
+    // TOP: glide back up through the page. The bar stays on screen during the trip and hides itself on arrival.
+    // Duration grows with distance (about 0.45s for a short climb, capped at 1.4s). Any wheel, touch, key or
+    // mouse press stops it where it is; readers who prefer reduced motion get an instant jump.
+    var flyId = 0;
+    function cancelFly() { if (flyId) { cancelAnimationFrame(flyId); flyId = 0; } }
+    function flyToTop() {
+      var from = window.pageYOffset;
+      if (from <= 0) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { window.scrollTo(0, 0); return; }
+      var dur = Math.min(1400, Math.max(450, 350 + from * 0.04));
+      var t0 = null;
+      function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }   // ease in-out cubic
+      function step(ts) {
+        if (t0 === null) t0 = ts;
+        var t = Math.min(1, (ts - t0) / dur);
+        window.scrollTo(0, Math.round(from * (1 - ease(t))));
+        flyId = t < 1 ? requestAnimationFrame(step) : 0;
+      }
+      flyId = requestAnimationFrame(step);
+    }
+    ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) { window.addEventListener(ev, cancelFly, { passive: true }); });
+    topBtn.addEventListener('click', function () { closeMenu(); flyToTop(); });
   }
 
   // ----- signup form -----
