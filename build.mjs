@@ -119,7 +119,7 @@ function layout({ title, description, path: urlPath, body, ogImage = '/og.png', 
   const desc = description || cfg.blurb || cfg.name;
   const abs = (u) => (cfg.siteUrl ? cfg.siteUrl + u : u);
   return `<!doctype html>
-<html lang="en" data-theme="dark" data-view="${cfg.defaultView}" data-gridmode="full">
+<html lang="en" data-theme="dark" data-view="${cfg.defaultView}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -137,8 +137,7 @@ ${ogImage && cfg.siteUrl ? `<meta property="og:image" content="${esc(abs(ogImage
 <script>
 (function(){var d=document.documentElement;try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')d.dataset.theme=t;
 var h=location.hash.replace('#','');var v=(h==='grid'||h==='calendar')?h:localStorage.getItem('archiveView');
-if(v==='grid'||v==='calendar')d.dataset.view=v;var g=localStorage.getItem('gridMode');if(g==='full'||g==='weekly')d.dataset.gridmode=g;
-}catch(e){}})();
+if(v==='grid'||v==='calendar')d.dataset.view=v;}catch(e){}})();
 </script>
 </head>
 <body data-page="${esc(page || '')}">
@@ -219,8 +218,6 @@ ${p.images.map((im, i) => `      <li><a href="${p.url}#img-${p.year}-${p.week}-$
 
 function archivePage(posts) {
   const full = `<div class="fullgrid">\n${posts.map(fullWeek).join('\n')}\n</div>`;
-  const toggle = `<div class="grid-mode" role="group" aria-label="Grid layout"><button type="button" class="link-btn" data-mode="full" aria-pressed="true">Full</button><button type="button" class="link-btn" data-mode="weekly" aria-pressed="false">Weekly</button></div>`;
-  const grid = `<ul class="grid">\n${posts.map(thumbCell).join('\n')}\n  </ul>`;
   const months = [];
   for (const p of posts) {
     const k = monthKey(p.date);
@@ -238,7 +235,7 @@ ${m.items.map(thumbCell).join('\n')}
   return layout({
     title: 'Archive', path: '/archive/', page: 'archive',
     body: `<div class="view view-grid">
-  <div class="wide">${posts.length ? `${toggle}\n${grid}\n${full}` : empty}</div>
+  <div class="wide">${posts.length ? full : empty}</div>
 </div>
 <div class="view view-calendar">
   <div class="wide">${posts.length ? calendar : empty}</div>

@@ -1,4 +1,4 @@
-"""GRID view: WEEKLY / FULL toggle.  FULL = every image, newest week first, one week per row: 12 across on screens 900px and up
+"""GRID view (FULL only; the WEEKLY toggle was removed 2026-10-28).  Every image, newest week first, one week per row: 12 across on screens 900px and up
 (week number + year in the left margin), 3 across (4 rows per week, label above) on smaller screens. Each image links to that image
 inside its week's page.   Run after building:  python3 tests/test_fullgrid.py"""
 import subprocess, time, os, sys, re
@@ -35,12 +35,7 @@ try:
         # ---------- desktop 1440 ----------
         ctx = br.new_context(viewport={"width": 1440, "height": 900}); ctx.add_init_script("try{history.scrollRestoration='manual'}catch(e){}")
         pg = ctx.new_page(); pg.goto(B + "/archive/#grid"); pg.wait_for_load_state("networkidle")
-        check("toggle exists in the GRID view with FULL then WEEKLY (in that order)", pg.locator(".grid-mode [data-mode]").count() == 2 and [x.lower() for x in pg.locator(".grid-mode [data-mode]").all_inner_texts()] == ["full", "weekly"])
-        check("default is FULL: the full grid shows, the weekly grid is hidden", pg.is_visible(".fullgrid") and not pg.is_visible(".view-grid .grid"))
-        tb = pg.locator(".grid-mode").bounding_box()
-        check("toggle is centered on the page", abs((tb["x"] + tb["width"] / 2) - 720) < 3)
-        check("FULL is marked pressed", pg.get_attribute('.grid-mode [data-mode="full"]', "aria-pressed") == "true" and pg.get_attribute('.grid-mode [data-mode="weekly"]', "aria-pressed") == "false")
-        check("FULL is the left-hand option", pg.locator('.grid-mode [data-mode="full"]').bounding_box()["x"] < pg.locator('.grid-mode [data-mode="weekly"]').bounding_box()["x"])
+        check("the GRID view shows the full grid, and there is no toggle or weekly grid any more", pg.is_visible(".fullgrid") and pg.locator(".grid-mode").count() == 0 and pg.locator(".view-grid .grid").count() == 0)
         g = geo(pg)
         check(f"one row per week ({N})", g["weeks"] == N)
         check("every week has 12 images", all(n == 12 for n in g["imgs"]))
@@ -55,14 +50,6 @@ try:
         clash = pg.evaluate("""() => { const L = document.getElementById('corner-theme').getBoundingClientRect(); let n = 0;
           for (const l of document.querySelectorAll('.fg-label')) { const r = l.getBoundingClientRect(); if (r.left < L.right && r.right > L.left) n++; } return n; }""")
         check("the corner LIGHT label never shares a column with the week labels", clash == 0)
-        # persistence: switch to WEEKLY, reload, it stays; a fresh visitor (empty storage) gets FULL
-        pg.click('.grid-mode [data-mode="weekly"]'); pg.wait_for_timeout(200)
-        check("WEEKLY: weekly grid shows, full grid hidden, WEEKLY marked pressed", pg.is_visible(".view-grid .grid") and not pg.is_visible(".fullgrid") and pg.get_attribute('.grid-mode [data-mode="weekly"]', "aria-pressed") == "true")
-        pg.reload(); pg.wait_for_load_state("networkidle")
-        check("the WEEKLY choice is remembered after a reload", pg.is_visible(".view-grid .grid") and not pg.is_visible(".fullgrid"))
-        pg.click('.grid-mode [data-mode="full"]'); pg.wait_for_timeout(200)
-        pg.reload(); pg.wait_for_load_state("networkidle")
-        check("the FULL choice is remembered after a reload", pg.is_visible(".fullgrid") and pg.get_attribute('.grid-mode [data-mode="full"]', "aria-pressed") == "true")
         # click an image: lands on that image inside its week
         pg.locator(".fg-week").first.locator(".fg-row li").nth(4).locator("a").click(); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
         check("click opens that week's page at that image (URL anchor)", pg.url.endswith(f"/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-5"))
@@ -93,7 +80,7 @@ try:
         # ---------- breakpoint ----------
         for width, want in ((900, 12), (1200, 12), (899, 3), (768, 3)):
             ctx = br.new_context(viewport={"width": width, "height": 900}); pg = ctx.new_page()
-            pg.add_init_script("try{localStorage.setItem('gridMode','full')}catch(e){}")
+            pg.add_init_script("try{localStorage.setItem('gridMode','weekly')}catch(e){}")   # an old saved WEEKLY choice must be ignored
             pg.goto(B + "/archive/#grid"); pg.wait_for_load_state("networkidle")
             g = geo(pg)
             check(f"{width}px wide: {want} across, no sideways scrolling", g["cols"] == want and not g["over"])
@@ -102,10 +89,7 @@ try:
         # ---------- phone ----------
         ctx = br.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
         pg = ctx.new_page(); pg.goto(B + "/archive/#grid"); pg.wait_for_load_state("networkidle")
-        check("phone: the toggle is there and FULL is the default", pg.is_visible(".grid-mode") and pg.is_visible(".fullgrid") and not pg.is_visible(".view-grid .grid"))
-        pg.tap('.grid-mode [data-mode="weekly"]'); pg.wait_for_timeout(200)
-        check("phone: WEEKLY works", pg.is_visible(".view-grid .grid") and not pg.is_visible(".fullgrid"))
-        pg.tap('.grid-mode [data-mode="full"]'); pg.wait_for_timeout(300)
+        check("phone: the full grid shows and there is no toggle", pg.is_visible(".fullgrid") and pg.locator(".grid-mode").count() == 0)
         g = geo(pg)
         check("phone: 3 across, 4 rows of 3 per week", g["cols"] == 3 and abs(g["rowHeight"] - (4 * g["cell"][1] + 3 * g["hgap"])) < 2)
         check("phone: thumbnails about 118px, 2px apart", 112 <= g["cell"][0] <= 122 and abs(g["hgap"] - 2) < 0.6)

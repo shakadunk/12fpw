@@ -116,13 +116,6 @@ html[data-view="calendar"] .view-calendar { display: block; }
 .month + .month { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
 .month h2 { margin-bottom: 1.1rem; }
 
-/* GRID view toggle: FULL (every image, one week per row; the default) or WEEKLY (the grid above). Centered, small caps like the nav. */
-.grid-mode { display: flex; justify-content: center; gap: 1.5rem; margin: 0 0 18px; font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; }
-.grid-mode .link-btn { opacity: 0.5; padding: 4px 0; }
-.grid-mode .link-btn:hover { opacity: 1; text-decoration: none; }
-.grid-mode .link-btn[aria-pressed="true"] { opacity: 1; text-decoration: underline; text-underline-offset: 0.3em; }
-html[data-gridmode="weekly"] .fullgrid { display: none; }
-html[data-gridmode="full"] .view-grid .grid { display: none; }
 /* FULL, phones and small screens: 3 across, 4 rows per week, with the week number and year above each week */
 .fullgrid { display: flex; flex-direction: column; gap: 22px; }
 .fg-label { margin: 0 0 6px; font-size: 11px; line-height: 1.2; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
@@ -133,7 +126,7 @@ html[data-gridmode="full"] .view-grid .grid { display: none; }
 .fg-row img { width: 100%; height: 100%; object-fit: cover; }
 /* FULL, desktop (900px and up): 12 across, using the full screen width; the week number and year sit in the left margin of each row */
 @media (min-width: 900px) {
-  html[data-gridmode="full"] .view-grid .wide { max-width: none; }
+  .view-grid .wide { max-width: none; }
   .fullgrid { gap: 14px; }
   .fg-week { display: grid; grid-template-columns: 34px 1fr; gap: 0 14px; align-items: start; }
   .fg-label { padding-top: 2px; margin: 0; }

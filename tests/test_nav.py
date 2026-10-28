@@ -98,7 +98,7 @@ try:
         # ================= ARCHIVE page =================
         check("archive: no title row and no inline view buttons", page.locator(".archive-bar").count() == 0 and page.locator(".view-toggle").count() == 0)
         check("archive: header ARCHIVE is marked as the current page", page.get_attribute("#nav-btn", "aria-current") == "page")
-        check("archive: grid has one thumbnail per post, with week labels", page.locator(".view-grid .grid li").count() == N and all(t.startswith("Week") for t in page.locator(".view-grid .tag").all_inner_texts()))
+        check("archive: grid view has one row per post (12 images each) with week labels; the calendar keeps the hero thumbnails", page.locator(".view-grid .fg-week").count() == N and page.locator(".view-grid .fg-week").first.locator("li").count() == 12 and page.locator(".view-calendar .grid li").count() == N)
         page.click("#nav-btn")
         check("archive: current view is full white in the menu, others dimmed", page.evaluate("(()=>{const a=getComputedStyle(document.querySelector('#nav-menu [aria-current=true]')).opacity;const b=getComputedStyle(document.querySelector('#nav-menu a:not([aria-current])')).opacity;return a==='1'&&parseFloat(b)<0.8})()"))
         check("archive: current view marked is GRID", page.get_attribute('#nav-menu [aria-current="true"]', "data-view") == "grid")
