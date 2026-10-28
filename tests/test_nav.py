@@ -44,7 +44,8 @@ try:
         # ================= HOME = the feed: most recent post first, then older posts (infinite scroll) =================
         page.goto(B + "/"); page.wait_for_load_state("networkidle")
         check("home: starts with the most recent post, which carries the one h1", f"Week {newest_wk[1]}" in page.inner_text("h1") and str(newest_wk[0]) in page.inner_text("h1") and page.locator("h1").count() == 1)
-        check("home: the first post has its 12 images and its text", page.locator("#scroll-list .post").first.locator("figure img").count() == 12 and len(page.locator("#scroll-list .post").first.locator(".text").inner_text()) > 40)
+        first = page.locator("#scroll-list .post").first   # a post can have no text (some old issues have none), so only check the text when there is one
+        check("home: the first post has its 12 images and its text (if it has any)", first.locator("figure img").count() == 12 and (first.locator(".text").count() == 0 or len(first.locator(".text").inner_text()) > 40))
         check("home: no back button", page.locator(".back").count() == 0)
         check("home: header has ARCHIVE and LIGHT, no SUBSCRIBE", labels(page, ".site-header nav") == ["ARCHIVE", "LIGHT"] and "SUBSCRIBE" not in page.locator(".site-header").text_content().upper())
         check("home: no signup form or email field on the page", page.locator("#subscribe-form").count() == 0 and page.locator("input[type=email]").count() == 0)
