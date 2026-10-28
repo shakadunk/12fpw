@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+// failOn none: a slightly damaged file (e.g. a JPEG missing its last few bytes) still gets a thumbnail; browsers display such files fine
 let sharp;
 try { sharp = require('sharp'); } catch {
   console.error('This script needs sharp. Run `npm install` in the project folder first.');
@@ -71,7 +72,7 @@ for (const [i, f] of files.entries()) {
   const n = String(i + 1).padStart(2, '0');
   const input = path.join(folder, f);
   const ext = path.extname(f).toLowerCase();
-  const info = await sharp(input).metadata();
+  const info = await sharp(input, { failOn: 'none' }).metadata();
   let file, w, h;
   if (SAFE.has(ext)) {
     file = `${n}${ext === '.jpeg' ? '.jpg' : ext}`;
@@ -80,12 +81,12 @@ for (const [i, f] of files.entries()) {
     w = turned ? info.height : info.width; h = turned ? info.width : info.height;
   } else {
     file = `${n}.jpg`;
-    const out = await sharp(input).rotate().flatten({ background: '#000000' }).jpeg({ quality: 95, mozjpeg: true }).toFile(path.join(dest, file));
+    const out = await sharp(input, { failOn: 'none' }).rotate().flatten({ background: '#000000' }).jpeg({ quality: 95, mozjpeg: true }).toFile(path.join(dest, file));
     w = out.width; h = out.height;
   }
   const size = fs.statSync(path.join(dest, file)).size;
   if (size > BIG) console.warn(`Note: ${f} is ${(size / 1048576).toFixed(1)} MB. Full-size files this large make the page slow to load; consider a smaller export.`);
-  const thumb = await sharp(input).rotate().flatten({ background: '#000000' })
+  const thumb = await sharp(input, { failOn: 'none' }).rotate().flatten({ background: '#000000' })
     .resize({ width: 700, withoutEnlargement: true })
     .jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(dest, `${n}-t.jpg`));
   images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, alt: '', ...(customLinks[i] === '-' ? { href: false } : customLinks[i] ? { href: customLinks[i] } : {}) });

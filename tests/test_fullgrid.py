@@ -48,11 +48,14 @@ try:
         check("no sideways scrolling", not g["over"])
         check("no left inset any more (the corner LIGHT/DARK label is gone): the week labels start at the page margin", pg.evaluate("parseFloat(getComputedStyle(document.querySelector('.fullgrid')).paddingLeft)") == 0)
         # click an image: lands on that image inside its week
-        pg.locator(".fg-week").first.locator(".fg-row li").nth(4).locator("a").click(); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
-        check("click opens that week's page at that image (URL anchor)", pg.url.endswith(f"/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-5"))
+        import json
+        ims = json.load(open(os.path.join(proj, "issues", slugs[0], "issue.json")))["images"]
+        k = next(i for i, im in enumerate(ims) if im["h"] / im["w"] <= 1.2) + 1   # the first image of the newest week that fits on screen (not a tall one)
+        pg.locator(".fg-week").first.locator(".fg-row li").nth(k - 1).locator("a").click(); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
+        check("click opens that week's page at that image (URL anchor)", pg.url.endswith(f"/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-{k}"))
         def pos(pg, n):
             return pg.evaluate(f"(() => {{ const r = document.getElementById('img-{newest[0]}-{newest[1]}-{n}').getBoundingClientRect(); return {{top: r.top, bottom: r.bottom, h: r.height, vh: innerHeight, y: scrollY}}; }})()")
-        q = pos(pg, 5)
+        q = pos(pg, k)
         check("that image is centred vertically on the screen after the click-through", q["h"] < q["vh"] - 40 and abs((q["top"] + q["bottom"]) / 2 - q["vh"] / 2) <= 3 and q["y"] > 500)
         # an image taller than the screen lines up just under the top edge instead
         import json
