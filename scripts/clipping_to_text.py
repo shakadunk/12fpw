@@ -15,8 +15,12 @@ def build(path):
     arc = plistlib.loads(d['com.apple.webarchive'])
     h = arc['WebMainResource']['WebResourceData'].decode('utf8')
     out = []
-    for m in re.finditer(r'<p\b[^>]*>(.*?)</p>', h, re.S):
-        inner = m.group(1).strip()
+    chunks = [m.group(1) for m in re.finditer(r'<p\b[^>]*>(.*?)</p>', h, re.S)]
+    if not chunks:                       # a short clipping can be a bare <span> with no <p> tags: use everything after <head>
+        body = re.sub(r'(?is)<!DOCTYPE[^>]*>|<head>.*?</head>', '', h)
+        chunks = [body]
+    for chunk in chunks:
+        inner = chunk.strip()
         ital = inner.startswith('<em>') and inner.endswith('</em>')
         inner = re.sub(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', lambda a: '[' + re.sub(r'<[^>]+>', '', a.group(2)) + '](' + a.group(1) + ')', inner, flags=re.S)
         t = re.sub(r'<br\s*/?>', '\n', inner)
