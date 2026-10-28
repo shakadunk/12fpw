@@ -109,10 +109,27 @@
   // Touch and pen never hover-open: they tap, as before.
   navs.forEach(function (nav) {
     var p = parts(nav);
-    p.btn.addEventListener('click', function () {
+    function toggleNav() {
       clearTimeout(nav._t);                                                            // a quick click beats a pending hover-open
       if (!p.menu.hidden && nav.dataset.hover) { delete nav.dataset.hover; return; }   // pin
       if (p.menu.hidden) openNav(nav); else closeNav(nav);
+    }
+    // Touch and pen: open on the finger lifting (pointerup) instead of waiting for the browser's synthesized click. On phones the
+    // click can be swallowed (a tap right after the scroll-up bar slid in, or while the page is still settling), which made
+    // ARCHIVE need two taps. The click that follows a handled tap is ignored; a drag or a release off the button does nothing.
+    var downAt = null, handledAt = 0;
+    p.btn.addEventListener('pointerdown', function (e) { downAt = e.pointerType === 'mouse' ? null : { x: e.clientX, y: e.clientY }; });
+    p.btn.addEventListener('pointercancel', function () { downAt = null; });
+    p.btn.addEventListener('pointerup', function (e) {
+      if (e.pointerType === 'mouse' || !downAt) return;
+      var moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y); downAt = null;
+      var r = p.btn.getBoundingClientRect();
+      if (moved > 10 || e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+      handledAt = Date.now(); toggleNav();
+    });
+    p.btn.addEventListener('click', function () {
+      if (Date.now() - handledAt < 700) return;                                        // this tap was already handled on pointerup
+      toggleNav();
     });
     nav.addEventListener('pointerenter', function (e) {
       if (e.pointerType !== 'mouse') return;
