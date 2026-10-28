@@ -1,0 +1,127 @@
+{
+  "year": 2023,
+  "week": 28,
+  "hero": 0,
+  "images": [
+    {
+      "file": "01.png",
+      "w": 1194,
+      "h": 1192,
+      "thumb": "01-t.jpg",
+      "tw": 700,
+      "th": 699,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=F8NeBYucGcw"
+    },
+    {
+      "file": "02.jpg",
+      "w": 1200,
+      "h": 1200,
+      "thumb": "02-t.jpg",
+      "tw": 700,
+      "th": 700,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=RDU9inJj5f0"
+    },
+    {
+      "file": "03.jpg",
+      "w": 1000,
+      "h": 1000,
+      "thumb": "03-t.jpg",
+      "tw": 700,
+      "th": 700,
+      "alt": "",
+      "href": "https://youtu.be/sRnPGI9SYwE?t=309"
+    },
+    {
+      "file": "04.jpg",
+      "w": 1200,
+      "h": 1200,
+      "thumb": "04-t.jpg",
+      "tw": 700,
+      "th": 700,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=lXP8B2osm_c"
+    },
+    {
+      "file": "05.jpg",
+      "w": 640,
+      "h": 640,
+      "thumb": "05-t.jpg",
+      "tw": 640,
+      "th": 640,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=BvlJ3keIJdw"
+    },
+    {
+      "file": "06.jpg",
+      "w": 700,
+      "h": 700,
+      "thumb": "06-t.jpg",
+      "tw": 700,
+      "th": 700,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=F2cF9o7FuU4"
+    },
+    {
+      "file": "07.jpg",
+      "w": 599,
+      "h": 585,
+      "thumb": "07-t.jpg",
+      "tw": 599,
+      "th": 585,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=ogYC-8hs870"
+    },
+    {
+      "file": "08.jpg",
+      "w": 1200,
+      "h": 1200,
+      "thumb": "08-t.jpg",
+      "tw": 700,
+      "th": 700,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=nB5FS6c7218"
+    },
+    {
+      "file": "09.jpg",
+      "w": 500,
+      "h": 500,
+      "thumb": "09-t.jpg",
+      "tw": 500,
+      "th": 500,
+      "alt": "",
+      "href": "https://youtu.be/TO7Urj_2MU0"
+    },
+    {
+      "file": "10.jpg",
+      "w": 600,
+      "h": 594,
+      "thumb": "10-t.jpg",
+      "tw": 600,
+      "th": 594,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=_OuA1qh6ofo"
+    },
+    {
+      "file": "11.jpg",
+      "w": 1200,
+      "h": 1200,
+      "thumb": "11-t.jpg",
+      "tw": 700,
+      "th": 700,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=KUqbPIoq-wo"
+    },
+    {
+      "file": "12.jpg",
+      "w": 600,
+      "h": 600,
+      "thumb": "12-t.jpg",
+      "tw": 600,
+      "th": 600,
+      "alt": "",
+      "href": "https://www.youtube.com/watch?v=IqYgNiZdfh4"
+    }
+  ]
+}
