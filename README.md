@@ -1,6 +1,6 @@
 # 12 Frames Per Week
 
-Static site for the weekly photo newsletter: the home page is the most recent post, an archive has **Scroll / Grid / Calendar** views, and every week has its own page. Black by default, with a light/dark toggle. The build has no dependencies and needs Node 20 or newer.
+Static site for the weekly photo newsletter: the home page is a scrolling feed (most recent post first), an archive has **Grid / Calendar** views, and every week has its own page. Black by default, with a light/dark toggle. The build has no dependencies and needs Node 20 or newer.
 
 ```
 issues/2024-w03/      one folder per post: 12 images, thumbnails, issue.json, text.txt
@@ -16,14 +16,13 @@ tests/                browser tests (Python + Playwright): `python3 tests/test_n
 
 ## What is in this version
 
-- **SCROLL:** newest first, infinite scroll. Each post is its text, then its 12 images, with a thin rule between posts.
 - **GRID:** a **FULL / WEEKLY** toggle (FULL is the default). WEEKLY is a 3-column grid of one hero image per post, labelled with its week number (click to open the post). FULL shows every image, newest week first, one week per row (12 across on desktop, 3 across and 4 rows per week on phones); click an image to jump to it in its week's page.
 - **CALENDAR:** the same grid, split into months by horizontal dividers.
-- **Header:** the name as plain text (**12 FRAMES PER WEEK**, or 12FPW on phones, always a link to the home page), **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with SCROLL / GRID / CALENDAR: on desktop it opens when you hover over it (click pins it open), on phones you tap. On the archive it switches the view in place, anywhere else it opens the archive in that view.
+- **Header:** the name as plain text (**12 FRAMES PER WEEK**, or 12FPW on phones, always a link to the home page), **ARCHIVE** and **LIGHT/DARK**. ARCHIVE is a dropdown with GRID / CALENDAR: on desktop it opens when you hover over it (click pins it open), on phones you tap. On the archive it switches the view in place, anywhere else it opens the archive in that view.
 - **Wide desktop screens (1200px and up):** LIGHT/DARK stands alone in the bottom-left corner; ARCHIVE is the far-right item in the header and in the scroll-up bar (TOP appears to its left in the bar), so it never moves. Narrower screens keep ARCHIVE, TOP and LIGHT together.
 - **Scroll-up bar (every page):** scroll down and the header goes away; scroll back up and **ARCHIVE, TOP and LIGHT/DARK** slide in as one frosted (blurred, see-through) band across the top, feathered at its bottom edge: **12 FRAMES PER WEEK** at the left (a link home; 12FPW on phones), ARCHIVE / TOP / LIGHT at the right. It lingers for a second after you start scrolling down (and stays while the mouse is on it), so it does not vanish abruptly. TOP glides back up through the page, and while the ARCHIVE menu is open the same frosted layer extends down under it, so the bar and the menu read as one piece, with softly rounded bottom corners.
-- **Home page** = the most recent post. An older week opened from the archive has a back-to-archive link at the top.
-- The home page footer shows only today's date at the bottom right (live, from the visitor's device), as 26 OCTOBER 2026. No other page has a footer (the name and Archive link were removed).
+- **Home page** = the feed: the most recent post first, then older posts one after another (infinite scroll, a thin rule between posts; each post is its text, then its 12 images). A single week's own page has a back-to-archive link at the top.
+- The home page shows today's date (live, from the visitor's device), as 26 OCTOBER 2026: on screens 1200px and up it stays fixed in the bottom-right corner, mirroring LIGHT/DARK in the bottom-left; on smaller screens it sits at the very end of the feed. No other page has a footer (the name and Archive link were removed).
 - Post pages live at `/2024/week-3/`.
 - Real posts only: the placeholder demo posts were deleted on 2026-10-27 once the backfill started (2023 Weeks 1 to 14 so far).
 - The **signup form is parked**: it is not shown on any page right now (a new spot is still to be chosen), and it is not connected to a mailing service yet. See `docs/SPEC.md` for the plan (Resend).

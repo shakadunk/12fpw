@@ -3,6 +3,6 @@
   "short": "12FPW",
   "blurb": "Twelve images, once a week.",
   "siteUrl": "",
-  "defaultView": "scroll",
+  "defaultView": "grid",
   "subscribeAction": ""
 }

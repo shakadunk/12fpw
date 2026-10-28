@@ -134,10 +134,10 @@
   });
   syncMode();
 
-  // ----- archive views + infinite scroll -----
+  // ----- home page feed (infinite scroll) + archive views (GRID / CALENDAR) -----
   var viewLinks = document.querySelectorAll('.nav-menu [data-view]');
   var list = document.getElementById('scroll-list');
-  var onArchive = !!list;
+  var onArchive = document.body.dataset.page === 'archive';
   var manifestEl = document.getElementById('manifest');
   var statusEl = document.getElementById('scroll-status');
   var endEl = document.getElementById('scroll-end');
@@ -150,8 +150,8 @@
   function nearEnd() { return endEl && endEl.getBoundingClientRect().top < window.innerHeight + 1600; }
 
   function loadMore() {
-    if (!list || loading || root.dataset.view !== 'scroll') return;
-    if (next >= urls.length) { setStatus(urls.length ? 'End of archive' : ''); return; }
+    if (!list || loading) return;
+    if (next >= urls.length) { setStatus(urls.length ? 'End' : ''); return; }
     if (Date.now() - failedAt < 3000) return;
     loading = true;
     setStatus('Loading');
@@ -167,12 +167,12 @@
         }
         next++;
         loading = false;
-        setStatus(next >= urls.length ? 'End of archive' : '');
+        setStatus(next >= urls.length ? 'End' : '');
         if (nearEnd()) loadMore();
       })
       .catch(function () { loading = false; failedAt = Date.now(); setStatus('Could not load more. Keep scrolling to retry.'); });
   }
-  function check() { if (root.dataset.view === 'scroll' && nearEnd()) loadMore(); }
+  function check() { if (list && nearEnd()) loadMore(); }
 
   function syncView() {
     if (!onArchive) return;
@@ -181,7 +181,6 @@
       if (a.dataset.view === v) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
     });
     store.set('archiveView', v);
-    check();
   }
   if (onArchive) {
     viewLinks.forEach(function (a) {
@@ -196,11 +195,14 @@
     });
     window.addEventListener('hashchange', function () {
       var h = location.hash.replace('#', '');
-      if (h === 'scroll' || h === 'grid' || h === 'calendar') { root.dataset.view = h; syncView(); }
+      if (h === 'grid' || h === 'calendar') { root.dataset.view = h; syncView(); }
     });
+    syncView();
+  }
+  if (list) {                                                // the home page feed
     window.addEventListener('scroll', check, { passive: true });
     window.addEventListener('resize', check);
-    syncView();
+    check();
   }
 
   // ----- scroll-up bar: hides on scroll down, returns on scroll up (every page) -----

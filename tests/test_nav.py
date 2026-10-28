@@ -41,15 +41,21 @@ try:
         bad = []
         page.on("response", lambda r: bad.append(r.url) if r.status >= 400 else None)
 
-        # ================= HOME = most recent post =================
+        # ================= HOME = the feed: most recent post first, then older posts (infinite scroll) =================
         page.goto(B + "/"); page.wait_for_load_state("networkidle")
-        check("home: shows the most recent post with an h1", f"Week {newest_wk[1]}" in page.inner_text("h1") and str(newest_wk[0]) in page.inner_text("h1"))
-        check("home: 12 images and the post text", page.locator("figure img").count() == 12 and len(page.inner_text(".text")) > 40)
+        check("home: starts with the most recent post, which carries the one h1", f"Week {newest_wk[1]}" in page.inner_text("h1") and str(newest_wk[0]) in page.inner_text("h1") and page.locator("h1").count() == 1)
+        check("home: the first post has its 12 images and its text", page.locator("#scroll-list .post").first.locator("figure img").count() == 12 and len(page.locator("#scroll-list .post").first.locator(".text").inner_text()) > 40)
         check("home: no back button", page.locator(".back").count() == 0)
         check("home: header has ARCHIVE and LIGHT, no SUBSCRIBE", labels(page, ".site-header nav") == ["ARCHIVE", "LIGHT"] and "SUBSCRIBE" not in page.locator(".site-header").text_content().upper())
         check("home: no signup form or email field on the page", page.locator("#subscribe-form").count() == 0 and page.locator("input[type=email]").count() == 0)
         check("home: footer is just the date", page.locator("footer a").count() == 0 and page.locator("#today").count() == 1)
-        check("home: pager shows only an older link", page.locator(".pager a").count() == 1 and "week 1" in page.inner_text(".pager").lower())
+        check("home: no pager (the feed replaces it)", page.locator(".pager").count() == 0)
+        check("home: only the first posts are on the page at load, the rest load as you scroll", page.locator("#scroll-list .post").count() < N or N <= 2)
+        all_posts_loaded(page)
+        check("home: infinite scroll loads every post, newest to oldest", page.locator("#scroll-list .post").count() == N and f"Week {newest_wk[1]}" in page.locator("#scroll-list .post .week").first.inner_text() and f"Week {oldest_wk[1]}" in page.locator("#scroll-list .post .week").last.inner_text())
+        check("home: thin rule between posts", page.evaluate("getComputedStyle(document.querySelectorAll('#scroll-list .post')[1]).borderTopWidth") == "1px")
+        check("home: later posts use h2, not another h1", page.locator("h1").count() == 1 and page.locator("#scroll-list .post h2.week").count() == N - 1)
+        page.evaluate("window.scrollTo(0, 0)")
         check("home: black background", page.evaluate("getComputedStyle(document.documentElement).backgroundColor") == "rgb(0, 0, 0)")
 
         # ================= text name replaces the logo image =================
@@ -76,7 +82,7 @@ try:
         # ================= header ARCHIVE dropdown (on a post page) =================
         page.click("#nav-btn")
         items = [t.strip().lower() for t in page.locator("#nav-menu a").all_inner_texts()]
-        check("header: ARCHIVE opens SCROLL / GRID / CALENDAR", items == ["scroll", "grid", "calendar"] and page.is_visible("#nav-menu"))
+        check("header: ARCHIVE opens GRID / CALENDAR (the feed is the home page)", items == ["grid", "calendar"] and page.is_visible("#nav-menu"))
         check("header: menu sits under the ARCHIVE label", abs(page.evaluate("document.getElementById('nav-menu').getBoundingClientRect().left - document.getElementById('nav-btn').getBoundingClientRect().left")) < 2)
         check("header: menu has no solid panel", page.evaluate("getComputedStyle(document.getElementById('nav-menu')).backgroundColor") == "rgba(0, 0, 0, 0)")
         check("header: frosted patch is behind the open menu", page.evaluate("(()=>{const c=getComputedStyle(document.querySelector('.site-header .nav-archive'),'::before');return c.content!=='none'&&parseFloat(c.height)>100&&(c.backdropFilter||c.webkitBackdropFilter).includes('blur')})()"))
@@ -86,10 +92,10 @@ try:
         page.click("#nav-btn"); page.mouse.click(700, 500); page.wait_for_timeout(150)
         check("header: clicking elsewhere closes it", not page.is_visible("#nav-menu"))
         page.click("#nav-btn"); page.click('#nav-menu a[data-view="grid"]'); page.wait_for_load_state("networkidle")
-        check("header (from a post): picking GRID opens the archive in grid view", page.url.endswith("/archive/#grid") and page.is_visible(".view-grid") and not page.is_visible(".view-scroll"))
+        check("header (from the home page): picking GRID opens the archive in grid view", page.url.endswith("/archive/#grid") and page.is_visible(".view-grid") and page.locator(".view-scroll").count() == 0)
 
         # ================= ARCHIVE page =================
-        check("archive: no title row and no inline SCROLL/GRID/CALENDAR buttons", page.locator(".archive-bar").count() == 0 and page.locator(".view-toggle").count() == 0)
+        check("archive: no title row and no inline view buttons", page.locator(".archive-bar").count() == 0 and page.locator(".view-toggle").count() == 0)
         check("archive: header ARCHIVE is marked as the current page", page.get_attribute("#nav-btn", "aria-current") == "page")
         check("archive: grid has one thumbnail per post, with week labels", page.locator(".view-grid .grid li").count() == N and all(t.startswith("Week") for t in page.locator(".view-grid .tag").all_inner_texts()))
         page.click("#nav-btn")
@@ -99,12 +105,12 @@ try:
         heads = [h.title() for h in page.locator(".view-calendar .month h2").all_inner_texts()]
         check("archive: switching to CALENDAR happens in place (months, dividers)", page.is_visible(".view-calendar") and heads[0] == month_of(newest_wk) and heads[-1] == month_of(oldest_wk) and page.url.endswith("#calendar"))
         check("archive: menu closed and page at the top after switching", not page.is_visible("#nav-menu") and page.evaluate("window.pageYOffset") == 0)
-        page.click("#nav-btn"); page.click('#nav-menu a[data-view="scroll"]'); page.wait_for_timeout(400)
-        check("archive: SCROLL view starts with the newest post first", page.is_visible(".view-scroll") and f"Week {newest_wk[1]}" in page.locator("#scroll-list .post .week").first.inner_text())
-        all_posts_loaded(page)
-        check("archive: infinite scroll loads every post, newest to oldest", page.locator("#scroll-list .post").count() == N and f"Week {oldest_wk[1]}" in page.locator("#scroll-list .post .week").last.inner_text())
-        check("archive: thin rule between posts", page.evaluate("getComputedStyle(document.querySelectorAll('#scroll-list .post')[1]).borderTopWidth") == "1px")
-        check("archive: view is remembered across a reload", (page.reload() or True) and page.is_visible(".view-scroll"))
+        page.click("#nav-btn"); page.click('#nav-menu a[data-view="grid"]'); page.wait_for_timeout(400)
+        check("archive: switching back to GRID works", page.is_visible(".view-grid") and not page.is_visible(".view-calendar"))
+        check("archive: the view is remembered across a reload", (page.reload() or True) and page.is_visible(".view-grid"))
+        check("archive: there is no SCROLL view any more", page.locator(".view-scroll").count() == 0 and page.locator('[data-view="scroll"]').count() == 0)
+        page.goto(B + "/archive/#scroll"); page.reload(); page.wait_for_load_state("networkidle")
+        check("archive: an old #scroll link just shows the grid", page.is_visible(".view-grid"))
         page.goto(B + "/archive/#calendar"); page.reload()
         check("archive: #calendar deep link wins over the saved view", page.is_visible(".view-calendar"))
 
@@ -132,7 +138,7 @@ try:
         check("bar: desktop shows the long name, not 12FPW", nm["short"] == 0)
         page.screenshot(path=f"{out}/nav-bar-closed.png", clip={"x": 0, "y": 0, "width": 1440, "height": 200})
         page.click("#slim-btn")
-        check("bar: ARCHIVE opens SCROLL / GRID / CALENDAR under it", [t.strip().lower() for t in page.locator("#slim-menu a").all_inner_texts()] == ["scroll", "grid", "calendar"] and page.is_visible("#slim-menu"))
+        check("bar: ARCHIVE opens GRID / CALENDAR under it", [t.strip().lower() for t in page.locator("#slim-menu a").all_inner_texts()] == ["grid", "calendar"] and page.is_visible("#slim-menu"))
         page.wait_for_timeout(300)
         cov = page.evaluate("""() => { const g=document.getElementById('slimbar'); const c=getComputedStyle(g,'::before'); const m=document.getElementById('slim-menu'); const mr=m.getBoundingClientRect(); const gr=g.getBoundingClientRect();
           const mi=(c.maskImage||c.webkitMaskImage||''); const ms=(c.maskSize||c.webkitMaskSize||''); const mc=(c.maskComposite||c.webkitMaskComposite||'');
@@ -214,7 +220,7 @@ try:
         page.mouse.click(700, 650); page.wait_for_timeout(200)
 
         # TOP + LIGHT from the bar
-        page.goto(B + "/archive/#scroll"); page.reload(); page.wait_for_load_state("networkidle"); all_posts_loaded(page)
+        page.goto(B + "/"); page.reload(); page.wait_for_load_state("networkidle"); all_posts_loaded(page)
         page.evaluate("window.scrollTo(0,60000)"); page.wait_for_timeout(250); page.evaluate("window.scrollBy(0,-200)"); page.wait_for_timeout(300)
         start = page.evaluate("window.pageYOffset")
         page.evaluate("""() => { window.__s=[]; const t0=performance.now(); (function s(){ window.__s.push([Math.round(performance.now()-t0), window.pageYOffset]); if (window.pageYOffset>0 || performance.now()-t0<150) requestAnimationFrame(s); })(); }""")
@@ -223,7 +229,7 @@ try:
         check("TOP: animated glide through intermediate positions", len([1 for _, y in s if 0 < y < start]) > 15 and all(ys[i+1] <= ys[i] for i in range(len(ys)-1)))
         dur = max(t for t, y in s if y > 0)
         check("TOP: long climb takes about 1.4s", 1100 <= dur <= 1800)
-        check("TOP: arrives at the top, keeps the view, bar hides", page.evaluate("window.pageYOffset") == 0 and page.is_visible(".view-scroll") and not bar_visible(page))
+        check("TOP: arrives at the top of the feed, bar hides", page.evaluate("window.pageYOffset") == 0 and page.locator("#scroll-list").count() == 1 and not bar_visible(page))
         page.evaluate("window.scrollTo(0,60000)"); page.wait_for_timeout(250); page.evaluate("window.scrollBy(0,-200)"); page.wait_for_timeout(300)
         page.click("#slim-top"); page.wait_for_timeout(350); page.mouse.move(700, 400); page.mouse.wheel(0, 120); page.wait_for_timeout(120)
         at = page.evaluate("window.pageYOffset"); page.wait_for_timeout(800)
@@ -266,7 +272,7 @@ try:
         page.keyboard.press("Escape")
         check("keyboard: Esc closes it", not page.is_visible("#nav-menu"))
         # hover in the scroll-up bar
-        page.goto(B + "/archive/#scroll"); page.reload(); page.wait_for_load_state("networkidle"); page.mouse.move(5, 300); up(page, 3000)
+        page.goto(B + "/"); page.reload(); page.wait_for_load_state("networkidle"); page.mouse.move(5, 300); up(page, 3000)
         page.hover("#slim-btn"); page.wait_for_timeout(450)
         check("hover (bar): resting on ARCHIVE in the bar opens the menu (the layer extends under it)", page.is_visible("#slim-menu") and page.evaluate("document.getElementById('slimbar').classList.contains('menu-open')"))
         page.mouse.move(700, 700); page.wait_for_timeout(700)
@@ -304,7 +310,7 @@ try:
         m.screenshot(path=f"{out}/nav-phone-header.png", clip={"x": 0, "y": 0, "width": 390, "height": 300})
         m.tap('#nav-menu a[data-view="grid"]'); m.wait_for_url("**/archive/#grid"); m.wait_for_load_state("networkidle")
         check("phone: picking GRID goes to the archive grid", m.url.endswith("/archive/#grid") and m.is_visible(".view-grid"))
-        m.goto(B + "/archive/#scroll"); m.reload(); m.wait_for_load_state("networkidle")
+        m.goto(B + "/"); m.reload(); m.wait_for_load_state("networkidle")
         m.evaluate("window.scrollTo(0,1600)"); m.wait_for_timeout(250); m.evaluate("window.scrollBy(0,-160)"); m.wait_for_timeout(300)
         check("phone: bar appears on scroll up with ARCHIVE, TOP, LIGHT", bar_visible(m) and labels(m, "#slim-grp") == ["ARCHIVE", "TOP", "LIGHT"])
         pn = m.evaluate("(()=>{const l=document.querySelector('#slim-name .long').getBoundingClientRect().width, sh=document.querySelector('#slim-name .short'), r=sh.getBoundingClientRect();return {long:l, txt:sh.textContent.trim(), left:r.left, right:r.right, vis:r.width>0, gstart:document.getElementById('slim-grp').getBoundingClientRect().left}})()")

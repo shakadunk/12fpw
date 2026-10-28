@@ -102,7 +102,6 @@ a:hover .cap { color: var(--fg); }
 /* archive */
 body[data-page="archive"] main { padding-top: 1.5rem; }
 .view { display: none; }
-html[data-view="scroll"] .view-scroll,
 html[data-view="grid"] .view-grid,
 html[data-view="calendar"] .view-calendar { display: block; }
 .scroll-end { padding-top: 3rem; padding-bottom: 1rem; text-align: center; min-height: 6rem; }
@@ -247,6 +246,8 @@ html[data-gridmode="full"] .view-grid .grid { display: none; }
   .nav-menu { left: auto; right: 0; min-width: 0; text-align: right; }
   .corner-theme { display: block; position: fixed; z-index: 40; left: var(--pad); bottom: calc(var(--pad) - 6px); font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding: 6px 0; }
   .corner-theme:hover { color: var(--fg); text-decoration: none; }
+  /* home page: today's date stays put in the bottom-right corner, mirroring the LIGHT/DARK label in the bottom-left */
+  .today { position: fixed; z-index: 40; right: var(--pad); bottom: calc(var(--pad) - 6px); font-size: 12px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); padding: 6px 0; min-height: 0; pointer-events: none; }
 }
 
 /* phones (kept last so it overrides the rules above) */

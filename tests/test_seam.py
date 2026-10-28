@@ -24,7 +24,7 @@ with sync_playwright() as p:
             ctx = br.new_context(viewport={"width": w, "height": h}, device_scale_factor=2, is_mobile=mob, has_touch=mob)
             ctx.add_init_script("try{history.scrollRestoration='manual'}catch(e){}")
             pg = ctx.new_page(); pg.add_init_script(f"try{{localStorage.setItem('theme','{theme}')}}catch(e){{}}")
-            pg.goto(B + "/archive/#scroll"); pg.reload(); pg.wait_for_load_state("networkidle")
+            pg.goto(B + "/"); pg.reload(); pg.wait_for_load_state("networkidle")
             pg.add_style_tag(content=FLAT)
             for _ in range(5):
                 pg.evaluate("window.scrollTo(0, document.body.scrollHeight)"); pg.wait_for_timeout(250)

@@ -11,7 +11,7 @@ const dist = path.join(root, 'dist');
 const issuesDir = path.join(root, 'issues');
 
 const cfg = {
-  name: '12 Frames Per Week', short: '12FPW', blurb: '', siteUrl: '', defaultView: 'scroll', subscribeAction: '',
+  name: '12 Frames Per Week', short: '12FPW', blurb: '', siteUrl: '', defaultView: 'grid', subscribeAction: '',
   ...JSON.parse(fs.readFileSync(path.join(root, 'site.config.json'), 'utf8')),
 };
 if (!cfg.siteUrl) {
@@ -19,7 +19,7 @@ if (!cfg.siteUrl) {
   else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) cfg.siteUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
 }
 cfg.siteUrl = cfg.siteUrl.replace(/\/+$/, '');
-if (!['scroll', 'grid', 'calendar'].includes(cfg.defaultView)) cfg.defaultView = 'scroll';
+if (!['grid', 'calendar'].includes(cfg.defaultView)) cfg.defaultView = 'grid';
 const INITIAL_POSTS = 2; // posts rendered into the Scroll view before infinite scroll takes over
 
 // ---------- helpers ----------
@@ -105,7 +105,7 @@ ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.im
 // everywhere else the links simply open the archive in that view.
 // The name as plain text, always a link to the home page: full name on tablets and desktops, short form on phones.
 const brandLink = (cls, id) => `<a class="${cls}" id="${id}" href="/" aria-label="${esc(cfg.name)}, home"><span class="long">${esc(cfg.name)}</span><span class="short">${esc(cfg.short || '12FPW')}</span></a>`;
-const VIEWS = ['scroll', 'grid', 'calendar'];
+const VIEWS = ['grid', 'calendar'];   // the ARCHIVE dropdown. The scrolling feed is the home page itself.
 const archiveMenu = (id, { current = false } = {}) => `<div class="nav-archive">
       <button type="button" class="link-btn nav-archive-btn" id="${id}-btn" aria-haspopup="true" aria-expanded="false" aria-controls="${id}-menu"${current ? ' aria-current="page"' : ''}>Archive</button>
       <ul class="nav-menu" id="${id}-menu" hidden>
@@ -136,8 +136,8 @@ ${ogImage && cfg.siteUrl ? `<meta property="og:image" content="${esc(abs(ogImage
 <link rel="stylesheet" href="/style.css">
 <script>
 (function(){var d=document.documentElement;try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')d.dataset.theme=t;
-var h=location.hash.replace('#','');var v=(h==='scroll'||h==='grid'||h==='calendar')?h:localStorage.getItem('archiveView');
-if(v==='scroll'||v==='grid'||v==='calendar')d.dataset.view=v;var g=localStorage.getItem('gridMode');if(g==='full'||g==='weekly')d.dataset.gridmode=g;
+var h=location.hash.replace('#','');var v=(h==='grid'||h==='calendar')?h:localStorage.getItem('archiveView');
+if(v==='grid'||v==='calendar')d.dataset.view=v;var g=localStorage.getItem('gridMode');if(g==='full'||g==='weekly')d.dataset.gridmode=g;
 }catch(e){}})();
 </script>
 </head>
@@ -184,14 +184,24 @@ function subscribeForm() {
   <p class="form-note" id="form-note" role="status"></p>`;
 }
 
-// The home page is the most recent post (same markup as a post page, minus the back button).
+// The home page is the feed: the most recent post first, then older posts one after another (infinite scroll, see app.js),
+// with a thin rule between posts. The first post carries the page's h1.
 function homePage(posts) {
-  const p = posts[0];
-  if (!p) {
+  if (!posts.length) {
     return layout({ title: '', path: '/', page: 'home', body: `<div class="col"><p class="empty">No posts yet.</p></div>` });
   }
-  const page = postPage(p, undefined, posts[1], { home: true });
-  return page;
+  const first = posts.slice(0, INITIAL_POSTS);
+  const manifest = JSON.stringify(posts.map((p) => p.url));
+  const h = posts[0].images[posts[0].hero];
+  return layout({
+    title: '', path: '/', page: 'home', ogImage: posts[0].url + (h.thumb || h.file),
+    body: `<div class="col" id="scroll-list" data-loaded="${first.length}">
+${first.map((p, i) => postArticle(p, { eager: i === 0, heading: i === 0 ? 'h1' : 'h2' })).join('\n')}
+</div>
+<div class="col scroll-end" id="scroll-end"><span id="scroll-status" class="label"></span></div>
+<noscript><p class="col label">Turn on JavaScript to keep scrolling, or open the <a href="/archive/">Archive</a>.</p></noscript>
+<script type="application/json" id="manifest">${manifest.replace(/</g, '\\u003c')}</script>`,
+  });
 }
 
 const thumbCell = (p) => {
@@ -225,34 +235,25 @@ function archivePage(posts) {
 ${m.items.map(thumbCell).join('\n')}
   </ul>
 </section>`).join('\n');
-  const first = posts.slice(0, INITIAL_POSTS);
-  const manifest = JSON.stringify(posts.map((p) => p.url));
   const empty = '<p class="empty">No posts yet.</p>';
   return layout({
     title: 'Archive', path: '/archive/', page: 'archive',
-    body: `<div class="view view-scroll">
-  <div class="col" id="scroll-list" data-loaded="${first.length}">
-${first.length ? first.map((p, i) => postArticle(p, { eager: i === 0 })).join('\n') : empty}
-  </div>
-  <div class="col scroll-end" id="scroll-end"><span id="scroll-status" class="label"></span></div>
-  <noscript><p class="col label">Turn on JavaScript to keep scrolling, or use the Grid and Calendar views.</p></noscript>
-</div>
-<div class="view view-grid">
+    body: `<div class="view view-grid">
   <div class="wide">${posts.length ? `${toggle}\n${grid}\n${full}` : empty}</div>
 </div>
 <div class="view view-calendar">
   <div class="wide">${posts.length ? calendar : empty}</div>
-</div>
-<script type="application/json" id="manifest">${manifest.replace(/</g, '\\u003c')}</script>`,
+</div>`,
   });
 }
 
-function postPage(p, newer, older, { home = false } = {}) {
+function postPage(p, newer, older) {
   const nav = (q, dir) => (q ? `<a href="${q.url}">${dir === 'older' ? '← ' : ''}${esc(weekLabel(q))}, ${q.year}${dir === 'newer' ? ' →' : ''}</a>` : '<span></span>');
   return layout({
-    title: home ? '' : `${weekLabel(p)}, ${p.year}`, path: home ? '/' : p.url, page: home ? 'home' : 'post', ogImage: p.url + (p.images[p.hero].thumb || p.images[p.hero].file),
+    title: `${weekLabel(p)}, ${p.year}`, path: p.url, page: 'post', ogImage: p.url + (p.images[p.hero].thumb || p.images[p.hero].file),
     body: `<div class="col">
-${home ? '' : '  <p class="back label"><a href="/archive/">← Archive</a></p>\n'}${postArticle(p, { eager: true, heading: 'h1' })}
+  <p class="back label"><a href="/archive/">← Archive</a></p>
+${postArticle(p, { eager: true, heading: 'h1' })}
   <nav class="pager label" aria-label="Posts">
     ${nav(older, 'older')}
     ${nav(newer, 'newer')}

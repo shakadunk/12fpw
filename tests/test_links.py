@@ -13,7 +13,9 @@ def check(name, ok):
     if not ok: bad.append(name)
 
 build("https://example.test")
-home = open(os.path.join(root, "dist", "index.html"), encoding="utf8").read()
+slugs = sorted((d for d in os.listdir(os.path.join(root, "issues")) if d[:4].isdigit()), key=lambda s: (int(s[:4]), int(s.split("-w")[1])), reverse=True)
+y, w = slugs[0].split("-w")
+home = open(os.path.join(root, "dist", y, f"week-{int(w)}", "index.html"), encoding="utf8").read()   # the newest week's own page
 links = re.findall(r'<a class="img-link" href="([^"]+)" target="_blank" rel="noopener"', home)
 check("every one of the 12 images has a link", len(links) == 12)
 ok = True
