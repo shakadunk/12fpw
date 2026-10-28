@@ -68,7 +68,7 @@ function loadPosts() {
     const text = fs.existsSync(textPath) ? fs.readFileSync(textPath, 'utf8').replace(/\r\n/g, '\n').trim() : '';
     const hero = Math.min(Math.max(Number.isInteger(meta.hero) ? meta.hero : 0, 0), images.length - 1);
     const date = /^\d{4}-\d{2}-\d{2}$/.test(meta.date || '') ? meta.date : isoThursday(year, week);
-    posts.push({ slug: d.name, dir, year, week, date, text, images, hero, url: `/${year}/week-${week}/` });
+    posts.push({ slug: d.name, dir, year, week, date, text, images, hero, lens: meta.lens !== false, url: `/${year}/week-${week}/` });   // meta.lens === false: the images are original photography, so no image-search links
   }
   posts.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.week - a.week));
   return posts;
@@ -96,7 +96,7 @@ function postArticle(p, { eager = false, heading = 'h2' } = {}) {
   </header>
 ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.images.map((im, i) => {
     const img = `<img src="${p.url}${esc(im.file)}" alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async">`;
-    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${cfg.siteUrl ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
+    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${cfg.siteUrl && p.lens ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
   }).join('\n')}
 </article>`;
 }

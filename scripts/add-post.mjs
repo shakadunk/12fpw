@@ -1,6 +1,7 @@
 // Create (or replace) one weekly post from a folder of images and a text file.
 //
-//   node scripts/add-post.mjs <folder> --year 2025 --week 3 [--text text.txt] [--hero 1] [--force] [--push]
+//   node scripts/add-post.mjs <folder> --year 2025 --week 3 [--text text.txt] [--hero 1] [--no-lens] [--force] [--push]
+//   --no-lens: the week is all original photography, so its images get no Google image-search links
 //
 // <folder> holds the 12 images (sorted by filename) and optionally text.txt.
 // The images are kept at FULL SIZE: browser-friendly files (JPEG, PNG, WebP, GIF, AVIF) are copied byte for byte,
@@ -79,7 +80,7 @@ for (const [i, f] of files.entries()) {
   images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, alt: '' });
 }
 
-fs.writeFileSync(path.join(dest, 'issue.json'), JSON.stringify({ year, week, hero, images }, null, 2) + '\n');
+fs.writeFileSync(path.join(dest, 'issue.json'), JSON.stringify({ year, week, hero, ...(flag('no-lens') ? { lens: false } : {}), images }, null, 2) + '\n');
 fs.writeFileSync(path.join(dest, 'text.txt'), text + (text ? '\n' : ''));
 const kb = Math.round(fs.readdirSync(dest).reduce((a, f) => a + fs.statSync(path.join(dest, f)).size, 0) / 1024);
 console.log(`Created issues/${slug}: ${images.length} images, ${kb} KB. Week ${week}, ${year}.`);

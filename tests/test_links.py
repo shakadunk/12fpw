@@ -35,6 +35,13 @@ check("without a site address there are no image links (they would not work)", "
 sys.path.insert(0, root)
 html = open(os.path.join(root, "build.mjs"), encoding="utf8").read()
 check("preface rule present in build.mjs and style.css", "class=\"preface\"" in html and "p.preface" in open(os.path.join(root, "static", "style.css"), encoding="utf8").read())
+# a week marked lens:false in its issue.json (all original photography, e.g. 2023 Week 21) gets no image-search links
+build("https://example.test")
+w21 = open(os.path.join(root, "dist", "2023", "week-21", "index.html"), encoding="utf8").read()
+w20 = open(os.path.join(root, "dist", "2023", "week-20", "index.html"), encoding="utf8").read()
+check("Week 21 (original photography, lens:false) has no image-search links", "img-link" not in w21 and w21.count("<figure") == 12)
+check("Week 20 still has all 12 image-search links", w20.count('class="img-link"') == 12)
+
 # links inside the text (Week 6 and Week 9 carry YouTube links; write [words](https://...) in text.txt)
 build(None)
 w6 = open(os.path.join(root, "dist", "2023", "week-6", "index.html"), encoding="utf8").read()
@@ -44,4 +51,4 @@ check("Week 9 text has its link: 'video' -> youtube", '<a class="text-link" href
 check("no raw [words](address) markup is left on any page", not any(re.search(r"\]\(https?://", open(os.path.join(dp, f), encoding="utf8").read()) for dp, _, fs in os.walk(os.path.join(root, "dist")) for f in fs if f.endswith(".html")))
 css = open(os.path.join(root, "static", "style.css"), encoding="utf8").read()
 check("link style: underlined and slightly heavier (weight 500)", re.search(r"\.text a\.text-link\s*\{[^}]*font-weight:\s*500[^}]*underline", css) is not None)
-print(f"{8 - len(bad)}/8 passed"); sys.exit(1 if bad else 0)
+print(f"{10 - len(bad)}/10 passed"); sys.exit(1 if bad else 0)
