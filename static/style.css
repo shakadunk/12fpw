@@ -259,4 +259,24 @@ html[data-gridmode="full"] .view-grid .grid { display: none; }
   main { padding-top: 14px; }
   .grid .tag { padding: 20px 6px 5px; font-size: 10px; }
   .site-header nav { gap: 1.1rem; }
+  /* phone header: LIGHT/DARK at the left, the name (12FPW) centred, ARCHIVE at the right (mirrors the desktop layout) */
+  .site-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; }
+  .nav-menu { left: auto; right: 0; min-width: 0; text-align: right; }   /* ARCHIVE is at the right edge now, so its menu opens right-aligned and stays on screen */
+  .site-header nav { display: contents; }
+  .site-header .theme-toggle { grid-column: 1; grid-row: 1; justify-self: start; }
+  .site-header .site-name { grid-column: 2; grid-row: 1; }
+  .site-header .nav-archive { grid-column: 3; grid-row: 1; justify-self: end; }
+  /* phone scroll-up bar: LIGHT/DARK at the left, TOP in the centre where 12FPW sits in the header (tapping it returns to the top,
+     where the header and its 12FPW are back), ARCHIVE at the right. The name is not repeated in the bar on phones. */
+  .slimbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; }
+  .slim-grp { display: contents; }
+  .slimbar .slim-name { display: none; }
+  .slimbar .theme-toggle { grid-column: 1; grid-row: 1; justify-self: start; pointer-events: auto; }
+  .slimbar #slim-top { grid-column: 2; grid-row: 1; pointer-events: auto; }
+  .slimbar .nav-archive { grid-column: 3; grid-row: 1; justify-self: end; pointer-events: auto; }
+  /* bigger invisible tap targets for the thumb: extra padding around the 12px labels, cancelled by a negative margin so nothing moves */
+  .site-header .theme-toggle, .site-header .nav-archive-btn, .slimbar .theme-toggle, .slimbar #slim-top, .slimbar .nav-archive-btn { padding: 12px 14px; margin: -12px -14px; }
+  .nav-menu a { padding: 12px 14px; margin: 0 -14px; }
+}
+}
 }
