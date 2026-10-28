@@ -38,6 +38,9 @@
     p.btn.setAttribute('aria-expanded', 'false');
   }
   function closeAllNavs() { navs.forEach(closeNav); }
+  // Frosted shape around the open menu. Outer edges: 41px left of the labels, 26px right, 40px below the menu (10px more than before:
+  // optical room under the last item before the fade), corners 40px, edges fading in over 24px.
+  var SHAPE = { left: 41, right: 26, below: 40, corner: 40, fade: 24 };
   function openNav(nav) {
     closeAllNavs();
     var p = parts(nav);
@@ -49,34 +52,50 @@
       // Geometry for the single frosted layer behind the bar + menu (see style.css): how far it extends below the band,
       // and the menu column's left edge and width in px.
       var br = p.host.getBoundingClientRect(), mr = p.menu.getBoundingClientRect();
-      // Outer edges of the frosted shape around the menu (it fades in over ~24px, so it is clearly visible about 18px in):
-      // 41px left of the labels, 26px right of the menu, 30px below it.
       var BELOW = 12;                         // how far the bar's frosted layer reaches below the bar (keep in sync with style.css)
-      var extra = Math.max(0, Math.round((mr.bottom + 30) - (br.bottom + BELOW)));
-      var pl = Math.round(mr.left - 41), pw = Math.round(mr.width + 67);
+      var extra = Math.max(0, Math.round((mr.bottom + SHAPE.below) - (br.bottom + BELOW)));
+      var pl = Math.round(mr.left - SHAPE.left), pw = Math.round(mr.width + SHAPE.left + SHAPE.right);
       p.host.style.setProperty('--menu-extra', extra + 'px');
       p.host.style.setProperty('--patch-l', pl + 'px');
       p.host.style.setProperty('--patch-w', pw + 'px');
-      p.host.style.setProperty('--menu-mask', menuMask(pw, br.height + BELOW + extra, 40, 24));
+      p.host.style.setProperty('--menu-mask', menuMask(pw, br.height + BELOW + extra, SHAPE.corner, SHAPE.fade, true, false));
       p.host.classList.add('menu-open');
+    } else {
+      // Header (top of the page): there is no band above, so the shape is one rounded blob around the ARCHIVE label and its
+      // menu, with the same spacing. It is flush with the top of the screen when it would reach past it, and open (no fade)
+      // at the right edge when it would reach past the screen, so the page never scrolls sideways.
+      var nr = nav.getBoundingClientRect(), mr2 = p.menu.getBoundingClientRect(), vw = document.documentElement.clientWidth;
+      var L = Math.min(nr.left, mr2.left) - SHAPE.left, R = Math.max(nr.right, mr2.right) + SHAPE.right;
+      var T = nr.top - 30, Bt = mr2.bottom + SHAPE.below;
+      var openTop = T <= 0, openRight = R >= vw;
+      if (openTop) T = 0;
+      if (openRight) R = vw;
+      var gw = Math.round(R - L), gh = Math.round(Bt - T);
+      nav.style.setProperty('--g-l', Math.round(L - nr.left) + 'px');
+      nav.style.setProperty('--g-t', Math.round(T - nr.top) + 'px');
+      nav.style.setProperty('--g-w', gw + 'px');
+      nav.style.setProperty('--g-h', gh + 'px');
+      nav.style.setProperty('--g-mask', menuMask(gw, gh, SHAPE.corner, SHAPE.fade, openTop, openRight));
     }
     nav.classList.add('open');
     p.btn.setAttribute('aria-expanded', 'true');
   }
-  // Soft rounded shape for the frosted area under the ARCHIVE menu, drawn once per open as one smooth image (so there are
-  // no seams): w x h px, rounded bottom corners of radius `c`, edges fading in over `f` px. The top edge is left open
-  // because it sits inside the bar. Returned as a CSS url() for use as a mask image.
-  function menuMask(w, h, c, f) {
+  // Soft rounded shape for the frosted area around the ARCHIVE menu, drawn once per open as one smooth image (so there are
+  // no seams): w x h px, rounded corners of radius `c`, edges fading in over `f` px. An edge can be left open (no fade, square
+  // corners) where the shape runs into the bar or the edge of the screen. Returned as a CSS url() for use as a mask image.
+  function menuMask(w, h, c, f, openTop, openRight) {
     var S = 2, W = Math.max(1, Math.round(w * S)), H = Math.max(1, Math.round(h * S));
     var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     var ctx = cv.getContext('2d'); if (!ctx) return 'none';
-    var img = ctx.createImageData(W, H), d = img.data;
+    var img = ctx.createImageData(W, H), d = img.data, INF = 1e9;
     for (var y = 0; y < H; y++) {
       for (var x = 0; x < W; x++) {
         var px = (x + 0.5) / S, py = (y + 0.5) / S;
-        var dist = Math.min(px, w - px, h - py);                                       // distance to the nearest straight edge
-        if (py > h - c && px < c) dist = c - Math.hypot(px - c, py - (h - c));         // bottom-left corner
-        else if (py > h - c && px > w - c) dist = c - Math.hypot(px - (w - c), py - (h - c));   // bottom-right corner
+        var dl = px, dr = openRight ? INF : w - px, dt = openTop ? INF : py, db = h - py;
+        var dist = Math.min(dl, dr, dt, db);                                            // distance to the nearest straight edge
+        var cx = px < c ? c : (!openRight && px > w - c) ? w - c : null;                 // corner centres (only where both edges are closed)
+        var cy = (!openTop && py < c) ? c : py > h - c ? h - c : null;
+        if (cx !== null && cy !== null) dist = Math.min(dist, c - Math.hypot(px - cx, py - cy));
         var a = dist <= 0 ? 0 : dist >= f ? 1 : dist / f;
         d[(y * W + x) * 4 + 3] = Math.round(a * 255);
       }

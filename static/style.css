@@ -156,8 +156,8 @@ html[data-gridmode="full"] .view-grid .grid { display: none; }
 
 /* ARCHIVE dropdown (header and scroll-up bar share it). The menu has no panel of its own: a frosted, feathered
    patch (blur + tint) sits behind it. --menu-h is set from the menu's real height by app.js. */
-:root { --bar-tint: rgba(0, 0, 0, 0.30); }
-[data-theme="light"] { --bar-tint: rgba(255, 255, 255, 0.30); }
+:root { --bar-tint: rgba(0, 0, 0, 0.26); }
+[data-theme="light"] { --bar-tint: rgba(255, 255, 255, 0.26); }
 .nav-archive { position: relative; z-index: 5; }
 .nav-archive-btn[aria-current="page"], .nav-archive.open .nav-archive-btn { text-decoration: underline; text-underline-offset: 0.3em; }
 .nav-menu { position: absolute; top: calc(100% + 12px); left: 0; margin: 0; padding: 4px 0 0; list-style: none; min-width: 8.5rem; }
@@ -183,7 +183,9 @@ html[data-gridmode="full"] .view-grid .grid { display: none; }
   .site-header .nav-archive.open::before, .slimbar .nav-menu::after, .slimbar::before { background: var(--bg); opacity: 0.88; }
 }
 /* header: the patch sits behind the open menu, under the ARCHIVE label */
-.site-header .nav-archive.open::before { left: -26px; right: -14px; top: 100%; height: calc(var(--menu-h, 117px) + 40px); }
+.site-header .nav-archive.open::before { left: var(--g-l, -26px); top: var(--g-t, 0); width: var(--g-w, 0px); height: var(--g-h, 0px);
+  -webkit-mask-image: var(--g-mask, none); mask-image: var(--g-mask, none); -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-composite: source-over; mask-composite: add; }
 
 /* scroll-up bar: ONE frosted band across the top of the screen. 12 FRAMES PER WEEK at the left (12FPW on phones);
    ARCHIVE, TOP and LIGHT/DARK at the right. The band is feathered along its bottom edge and keeps one depth; the ARCHIVE
