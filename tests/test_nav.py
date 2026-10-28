@@ -25,7 +25,7 @@ def bar_visible(page):
 def up(page, y, back=150):
     page.evaluate(f"window.scrollTo(0,{y})"); page.wait_for_timeout(250); page.evaluate(f"window.scrollBy(0,-{back})"); page.wait_for_timeout(300)
 def all_posts_loaded(page):
-    for _ in range(30):
+    for _ in range(90):
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)"); page.wait_for_timeout(300)
         if page.locator("#scroll-list .post").count() == N: break
 

@@ -2,7 +2,9 @@
 //
 //   node scripts/add-post.mjs <folder> --year 2025 --week 3 [--text text.txt] [--hero 1] [--no-lens] [--force] [--push]
 //   --no-lens: the week is all original photography, so its images get no Google image-search links
-//   links.txt (in the folder): one address per line, in image order, to send each image somewhere specific (e.g. a song)
+//   links.txt (in the folder): one address per line, in image order, to send each image somewhere specific (e.g. a song);
+//     a blank line keeps the default image-search link, a single dash (-) means no link on that image
+//   --date 2023-08-06: the real send date (the calendar month and the order come from it; the default is the Thursday of the ISO week)
 //
 // <folder> holds the 12 images (sorted by filename) and optionally text.txt.
 // The images are kept at FULL SIZE: browser-friendly files (JPEG, PNG, WebP, GIF, AVIF) are copied byte for byte,
@@ -26,7 +28,7 @@ try { sharp = require('sharp'); } catch {
 }
 
 const args = process.argv.slice(2);
-const valueFlags = ['--year', '--week', '--text', '--hero', '--links'];
+const valueFlags = ['--year', '--week', '--text', '--hero', '--links', '--date'];
 const opt = (n) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : undefined; };
 const flag = (n) => args.includes(`--${n}`);
 const folder = args.find((a, i) => !a.startsWith('--') && !valueFlags.includes(args[i - 1]));
@@ -58,7 +60,10 @@ fs.mkdirSync(dest, { recursive: true });
 // (the Google image-search link). Use it when each image should open something specific, such as a song.
 const linksPath = opt('links') || path.join(folder, 'links.txt');
 const customLinks = fs.existsSync(linksPath) ? fs.readFileSync(linksPath, 'utf8').replace(/\r\n/g, '\n').split('\n').map((l) => l.trim()) : [];
-if (customLinks.some((l) => l && !/^https?:\/\//.test(l))) fail('links.txt: every non-blank line must start with http:// or https://');
+// a line with just a dash means NO link on that image (e.g. original photography in a week of otherwise-sourced images)
+if (customLinks.some((l) => l && l !== '-' && !/^https?:\/\//.test(l))) fail('links.txt: every non-blank line must be a web address starting with http:// or https://, or a single dash for no link');
+const date = opt('date');
+if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('--date must look like 2023-08-06');
 const images = [];
 const SAFE = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
 const BIG = 8 * 1024 * 1024;
@@ -83,10 +88,10 @@ for (const [i, f] of files.entries()) {
   const thumb = await sharp(input).rotate().flatten({ background: '#000000' })
     .resize({ width: 700, withoutEnlargement: true })
     .jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(dest, `${n}-t.jpg`));
-  images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, alt: '', ...(customLinks[i] ? { href: customLinks[i] } : {}) });
+  images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, alt: '', ...(customLinks[i] === '-' ? { href: false } : customLinks[i] ? { href: customLinks[i] } : {}) });
 }
 
-fs.writeFileSync(path.join(dest, 'issue.json'), JSON.stringify({ year, week, hero, ...(flag('no-lens') ? { lens: false } : {}), images }, null, 2) + '\n');
+fs.writeFileSync(path.join(dest, 'issue.json'), JSON.stringify({ year, week, hero, ...(date ? { date } : {}), ...(flag('no-lens') ? { lens: false } : {}), images }, null, 2) + '\n');
 fs.writeFileSync(path.join(dest, 'text.txt'), text + (text ? '\n' : ''));
 const kb = Math.round(fs.readdirSync(dest).reduce((a, f) => a + fs.statSync(path.join(dest, f)).size, 0) / 1024);
 console.log(`Created issues/${slug}: ${images.length} images, ${kb} KB. Week ${week}, ${year}.`);

@@ -96,7 +96,7 @@ function postArticle(p, { eager = false, heading = 'h2' } = {}) {
   </header>
 ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.images.map((im, i) => {
     const img = `<img src="${p.url}${esc(im.file)}" alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async">`;
-    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${im.href ? `<a class="img-link" href="${esc(im.href)}" target="_blank" rel="noopener" title="Open link">${img}</a>` : cfg.siteUrl && p.lens ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
+    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${im.href ? `<a class="img-link" href="${esc(im.href)}" target="_blank" rel="noopener" title="Open link">${img}</a>` : im.href === false ? img : cfg.siteUrl && p.lens ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener" title="Search for this image on Google">${img}</a>` : img}</figure>`;
   }).join('\n')}
 </article>`;
 }
