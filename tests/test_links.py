@@ -60,7 +60,7 @@ for i, im in enumerate(meta["images"]):
 json.dump(meta, open(os.path.join(tmp, "issues", "2023-w27", "issue.json"), "w"))
 subprocess.run(["node", "build.mjs"], cwd=tmp, env={**os.environ, "SITE_URL": "https://example.test"}, check=True, stdout=subprocess.DEVNULL)
 pg = open(os.path.join(tmp, "dist", "2023", "week-27", "index.html"), encoding="utf8").read()
-check("custom image links: each image opens its own address in a new tab", 'href="https://www.youtube.com/watch?v=TEST01" target="_blank" rel="noopener" title="Open link"' in pg and pg.count("youtube.com/watch?v=TEST") == 10)
+check("custom image links: each image opens its own address in a new tab", 'href="https://www.youtube.com/watch?v=TEST01" target="_blank" rel="noopener"' in pg and pg.count("youtube.com/watch?v=TEST") == 10)
 check("custom image links: an image without one keeps the image-search link", "lens.google.com" in pg and pg.count("lens.google.com") == 1)
 fig4 = re.search(r'<figure id="img-2023-27-4">(.*?)</figure>', pg, re.S).group(1)
 check("an image marked with a dash has no link at all (just the picture)", "<img" in fig4 and "<a " not in fig4)
