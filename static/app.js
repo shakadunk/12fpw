@@ -218,6 +218,9 @@
     // starts again when the mouse leaves. Reaching the top of the page hides it immediately (the header is back).
     var HIDE_DELAY = 1000;
     var hideTimer = 0, hidePending = false, overBar = false;
+    // A one-time hint: the first time you scroll down from the top of a page, the bar slides in for the same one second and
+    // then slides away again, so people learn it is there before it disappears. After that it only appears on scroll up.
+    var hinted = false;
 
     function cancelHide() { clearTimeout(hideTimer); hideTimer = 0; }
     function hideSlim() { cancelHide(); hidePending = false; slim.classList.remove('show'); if (slimNav) closeNav(slimNav); }
@@ -245,6 +248,7 @@
       if (y <= topZone()) { hideSlim(); lastY = y; return; }   // the header is still on screen
       if (Math.abs(dy) < 6) return;                            // ignore tiny movements
       if (dy < 0) { cancelHide(); hidePending = false; slim.classList.add('show'); }
+      else if (!hinted && !slim.classList.contains('show')) { hinted = true; slim.classList.add('show'); scheduleHide(); }   // the hint
       else if (!overBar) scheduleHide();
       else hidePending = true;
       lastY = y;
