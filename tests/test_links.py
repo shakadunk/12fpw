@@ -42,6 +42,23 @@ w20 = open(os.path.join(root, "dist", "2023", "week-20", "index.html"), encoding
 check("Week 21 (original photography, lens:false) has no image-search links", "img-link" not in w21 and w21.count("<figure") == 12)
 check("Week 20 still has all 12 image-search links", w20.count('class="img-link"') == 12)
 
+# custom per-image links (links.txt, e.g. songs): built in a throwaway copy so the real site is untouched
+import shutil, tempfile
+tmp = tempfile.mkdtemp()
+subprocess.run(f"tar --exclude=.git --exclude=dist --exclude=node_modules --exclude=issues -cf - . | tar -xf - -C {tmp}", shell=True, cwd=root, check=True)
+os.makedirs(os.path.join(tmp, "issues"))
+shutil.copytree(os.path.join(root, "issues", "2023-w27"), os.path.join(tmp, "issues", "2023-w27"))
+import json
+meta = json.load(open(os.path.join(tmp, "issues", "2023-w27", "issue.json")))
+for i, im in enumerate(meta["images"]):
+    if i != 2: im["href"] = f"https://www.youtube.com/watch?v=TEST{i + 1:02d}"
+json.dump(meta, open(os.path.join(tmp, "issues", "2023-w27", "issue.json"), "w"))
+subprocess.run(["node", "build.mjs"], cwd=tmp, env={**os.environ, "SITE_URL": "https://example.test"}, check=True, stdout=subprocess.DEVNULL)
+pg = open(os.path.join(tmp, "dist", "2023", "week-27", "index.html"), encoding="utf8").read()
+check("custom image links: each image opens its own address in a new tab", 'href="https://www.youtube.com/watch?v=TEST01" target="_blank" rel="noopener" title="Open link"' in pg and pg.count("youtube.com/watch?v=TEST") == 11)
+check("custom image links: an image without one keeps the image-search link", "lens.google.com" in pg and pg.count("lens.google.com") == 1)
+shutil.rmtree(tmp, ignore_errors=True)
+
 # links inside the text (Week 6 and Week 9 carry YouTube links; write [words](https://...) in text.txt)
 build(None)
 w6 = open(os.path.join(root, "dist", "2023", "week-6", "index.html"), encoding="utf8").read()
@@ -51,4 +68,4 @@ check("Week 9 text has its link: 'video' -> youtube", '<a class="text-link" href
 check("no raw [words](address) markup is left on any page", not any(re.search(r"\]\(https?://", open(os.path.join(dp, f), encoding="utf8").read()) for dp, _, fs in os.walk(os.path.join(root, "dist")) for f in fs if f.endswith(".html")))
 css = open(os.path.join(root, "static", "style.css"), encoding="utf8").read()
 check("link style: underlined and slightly heavier (weight 500)", re.search(r"\.text a\.text-link\s*\{[^}]*font-weight:\s*500[^}]*underline", css) is not None)
-print(f"{10 - len(bad)}/10 passed"); sys.exit(1 if bad else 0)
+print(f"{12 - len(bad)}/12 passed"); sys.exit(1 if bad else 0)

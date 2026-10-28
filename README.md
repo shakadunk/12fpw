@@ -40,7 +40,7 @@ npm run dev        # builds, then serves http://localhost:3000
 Put the 12 images in a folder (they are used in filename order) with a `text.txt` next to them, then:
 
 ```
-npm run add-post -- ~/Desktop/week-3 --year 2025 --week 3 --push   # add --no-lens for a week of original photography (no image-search links)
+npm run add-post -- ~/Desktop/week-3 --year 2025 --week 3 --push   # --no-lens: original photography, no image-search links. A links.txt in the folder (one address per line) sends each image to its own link, e.g. songs.
 ```
 
 - The hero (thumbnail in Grid and Calendar) is always image 1. `--hero N` still exists but is not used.
