@@ -114,7 +114,7 @@ ${VIEWS.map((v) => `        <li><a href="/archive/#${v}" data-view="${v}">${v[0]
     </div>`;
 
 // Footer: only the home page has one (today's date). Every other page gets an empty, hidden block that just keeps the space at the bottom.
-function layout({ title, description, path: urlPath, body, ogImage, page }) {
+function layout({ title, description, path: urlPath, body, ogImage = '/og.png', page }) {
   const full = title ? `${title} — ${cfg.name}` : cfg.name;
   const desc = description || cfg.blurb || cfg.name;
   const abs = (u) => (cfg.siteUrl ? cfg.siteUrl + u : u);
@@ -192,9 +192,8 @@ function homePage(posts) {
   }
   const first = posts.slice(0, INITIAL_POSTS);
   const manifest = JSON.stringify(posts.map((p) => p.url));
-  const h = posts[0].images[posts[0].hero];
   return layout({
-    title: '', path: '/', page: 'home', ogImage: posts[0].url + (h.thumb || h.file),
+    title: '', path: '/', page: 'home',
     body: `<div class="col" id="scroll-list" data-loaded="${first.length}">
 ${first.map((p, i) => postArticle(p, { eager: i === 0, heading: i === 0 ? 'h1' : 'h2' })).join('\n')}
 </div>
