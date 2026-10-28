@@ -4,7 +4,7 @@ Replaces the old Mailchimp-based plan. The site and the email come from the same
 Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailchimp archive).
 
 ## Status
-- DONE (live on Vercel at 12fpw.vercel.app; the first real posts, 2023 Weeks 1 to 14, are in; the 12 placeholder demo posts were deleted on 2026-10-27, so only real posts remain): black site with SCROLL, GRID and CALENDAR views, home page = latest post, post pages, light/dark toggle, ARCHIVE dropdown in the header, scroll-up bar (ARCHIVE / TOP / LIGHT) on every page, signup form parked (hidden everywhere until a new spot is chosen), `scripts/add-post.mjs` to make a post from 12 images + text.
+- DONE (live on Vercel at 12fpw.vercel.app; the first real posts, 2023 Weeks 1 to 14, are in; the 12 placeholder demo posts were deleted on 2026-10-27, so only real posts remain): black site whose home page is a scrolling feed (latest post first, infinite scroll), an archive with GRID (FULL / WEEKLY) and CALENDAR views, a page for each week, light/dark toggle, ARCHIVE dropdown in the header, scroll-up bar (ARCHIVE / TOP / LIGHT) on every page, signup form parked (hidden everywhere until a new spot is chosen), `scripts/add-post.mjs` to make a post from 12 images + text.
 - WORKFLOW: Shaka describes a change, Claude confirms details, edits, tests, and pushes to the GitHub repo; Vercel redeploys automatically. Claude can push to shakadunk/12fpw (the Claude GitHub App is installed on the repo).
 - TO BUILD: backfill of the old posts, private upload page, email rendering, sending via Resend, signup endpoint, moving 12fpw.com to Vercel.
 
