@@ -165,7 +165,6 @@ ${page === 'home'
   <time class="today" id="today"></time>
 </footer>`
   : `<div class="site-footer" aria-hidden="true"></div>`}
-<button type="button" class="link-btn theme-toggle corner-theme" id="corner-theme"></button>
 <script src="/app.js" defer></script>
 </body>
 </html>

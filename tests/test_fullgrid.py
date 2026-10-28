@@ -46,10 +46,7 @@ try:
         check("label sits in the left margin of the row", g["labelRight"] <= g["rowLeft"] and g["rowLeft"] < 170)
         check("grid uses the full width (right edge about 40px from the screen edge)", 1440 - g["rowRight"] < 50)
         check("no sideways scrolling", not g["over"])
-        # the fixed LIGHT/DARK corner label must never cover a week label while scrolling
-        clash = pg.evaluate("""() => { const L = document.getElementById('corner-theme').getBoundingClientRect(); let n = 0;
-          for (const l of document.querySelectorAll('.fg-label')) { const r = l.getBoundingClientRect(); if (r.left < L.right && r.right > L.left) n++; } return n; }""")
-        check("the corner LIGHT label never shares a column with the week labels", clash == 0)
+        check("no left inset any more (the corner LIGHT/DARK label is gone): the week labels start at the page margin", pg.evaluate("parseFloat(getComputedStyle(document.querySelector('.fullgrid')).paddingLeft)") == 0)
         # click an image: lands on that image inside its week
         pg.locator(".fg-week").first.locator(".fg-row li").nth(4).locator("a").click(); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
         check("click opens that week's page at that image (URL anchor)", pg.url.endswith(f"/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-5"))

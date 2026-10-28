@@ -251,10 +251,12 @@
     var slimNav = slim.querySelector('.nav-archive');
     var lastY = window.pageYOffset, ticking = false;
 
-    // Scrolling down does not hide the bar at once: it lingers for HIDE_DELAY first. Scrolling back up cancels the
+    // Scrolling down does not hide the bar at once: it lingers for hideDelay() first. Scrolling back up cancels the
     // countdown (the bar stays), and while a mouse is resting on the bar or its menu the bar stays; the countdown
     // starts again when the mouse leaves. Reaching the top of the page hides it immediately (the header is back).
-    var HIDE_DELAY = 1000;
+    // How long it lingers: a little longer than before (it was 1s everywhere), and a bit longer again with a mouse than on a phone.
+    var PHONE_MQ = window.matchMedia ? window.matchMedia('(max-width: 719px)') : null;
+    function hideDelay() { return PHONE_MQ && PHONE_MQ.matches ? 1400 : 1800; }
     var hideTimer = 0, hidePending = false, overBar = false;
     // A one-time hint: the first time you scroll down from the top of a page, the bar slides in for the same one second and
     // then slides away again, so people learn it is there before it disappears. After that it only appears on scroll up.
@@ -269,7 +271,7 @@
         hideTimer = 0;
         if (overBar) return;                                   // mouse is on the bar: wait for it to leave
         hideSlim();
-      }, HIDE_DELAY);
+      }, hideDelay());
     }
     slim.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { overBar = true; cancelHide(); } });
     slim.addEventListener('pointerleave', function (e) {

@@ -25,13 +25,11 @@ try:
         check("home: date is small uppercase label style", page.evaluate("(()=>{const c=getComputedStyle(document.getElementById('today'));return c.textTransform==='uppercase'&&c.fontSize==='12px'})()"))
         page.screenshot(path="/tmp/12fpw-test-shots/footer-home-dark.png", clip={"x": 0, "y": 600, "width": 1440, "height": 300})
 
-        # wide screens: the date stays put in the bottom-right corner while the feed scrolls (like LIGHT/DARK in the bottom-left)
+        # wide screens: the date stays put in the bottom-right corner while the feed scrolls 
         d0 = page.evaluate("(()=>{const r=document.getElementById('today').getBoundingClientRect();return [r.right, r.bottom, getComputedStyle(document.getElementById('today')).position]})()")
         page.evaluate("window.scrollTo(0, 2500)"); page.wait_for_timeout(300)
         d1 = page.evaluate("(()=>{const r=document.getElementById('today').getBoundingClientRect();return [r.right, r.bottom]})()")
         check("home (wide): the date is fixed in the bottom-right corner and does not move when scrolling", d0[2] == "fixed" and abs(d0[0] - d1[0]) < 1 and abs(d0[1] - d1[1]) < 1 and 1440 - d0[0] < 50 and 900 - d0[1] < 50)
-        lt = page.evaluate("(()=>{const a=document.getElementById('corner-theme').getBoundingClientRect(), b=document.getElementById('today').getBoundingClientRect();return [Math.abs(a.bottom-b.bottom), a.left, 1440-b.right]})()")
-        check("home (wide): same height and same margin as the LIGHT/DARK label in the opposite corner", lt[0] < 3 and abs(lt[1] - lt[2]) < 1)
         page.evaluate("window.scrollTo(0, 0)")
 
         # live update across midnight (same open page)
