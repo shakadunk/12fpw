@@ -66,9 +66,15 @@ try:
         # click an image: lands on that image inside its week
         pg.locator(".fg-week").first.locator(".fg-row li").nth(4).locator("a").click(); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
         check("click opens that week's page at that image (URL anchor)", pg.url.endswith(f"/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-5"))
-        top = pg.evaluate(f"document.getElementById('img-{newest[0]}-{newest[1]}-5').getBoundingClientRect().top")
-        check("that image is at the top of the screen (not the top of the page)", 0 <= top < 60 and pg.evaluate("window.scrollY") > 500)
-        pg.go_back(); pg.wait_for_load_state("networkidle")
+        def pos(pg, n):
+            return pg.evaluate(f"(() => {{ const r = document.getElementById('img-{newest[0]}-{newest[1]}-{n}').getBoundingClientRect(); return {{top: r.top, bottom: r.bottom, h: r.height, vh: innerHeight, y: scrollY}}; }})()")
+        q = pos(pg, 5)
+        check("that image is centred vertically on the screen after the click-through", q["h"] < q["vh"] - 40 and abs((q["top"] + q["bottom"]) / 2 - q["vh"] / 2) <= 3 and q["y"] > 500)
+        # an image taller than the screen lines up just under the top edge instead
+        pg.goto(f"{B}/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-7"); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
+        q = pos(pg, 7)
+        check("an image taller than the screen starts near the top (about 16px down)", q["h"] > q["vh"] and 8 <= q["top"] <= 24)
+        pg.goto(B + "/archive/#grid"); pg.wait_for_load_state("networkidle")
         # deep in the list: an older week
         pg.evaluate("window.scrollTo(0, document.body.scrollHeight)"); pg.wait_for_timeout(400)
         last = pg.locator(".fg-week").last
@@ -101,6 +107,8 @@ try:
         check("phone: 22px between weeks, no sideways scrolling", abs(g["vgap"] - (22 + 6 + 13)) < 8 and not g["over"])
         pg.locator(".fg-week").first.locator(".fg-row li").nth(2).locator("a").tap(); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
         check("phone: tapping an image jumps to it in the week", pg.url.endswith(f"#img-{newest[0]}-{newest[1]}-3") and pg.evaluate("window.scrollY") > 300)
+        q = pos(pg, 3)
+        check("phone: the tapped image is centred vertically on the screen", q["h"] < q["vh"] - 40 and abs((q["top"] + q["bottom"]) / 2 - q["vh"] / 2) <= 3)
         ctx.close()
         br.close()
 finally:

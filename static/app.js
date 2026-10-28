@@ -182,6 +182,23 @@
     });
     store.set('archiveView', v);
   }
+  // Opened from the archive grid at '#img-<year>-<week>-<n>': put that image in the vertical middle of the screen
+  // (the browser's own jump would leave it at the very top). An image taller than the screen is lined up near the top instead.
+  if (document.body.dataset.page === 'post' && /^#img-/.test(location.hash)) {
+    var navType = ''; try { navType = performance.getEntriesByType('navigation')[0].type; } catch (e) {}
+    if (navType !== 'back_forward' && navType !== 'reload') {
+      var centerImg = function () {
+        var fig = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+        if (!fig) return;
+        var r = fig.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
+        var top = r.height >= vh - 32 ? r.top - 16 : r.top - (vh - r.height) / 2;
+        window.scrollTo({ top: Math.max(0, window.scrollY + top), behavior: 'instant' });
+      };
+      centerImg();
+      window.addEventListener('load', centerImg);
+    }
+  }
+
   if (onArchive) {
     viewLinks.forEach(function (a) {
       a.addEventListener('click', function (e) {
