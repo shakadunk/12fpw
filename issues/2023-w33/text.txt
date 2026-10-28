@@ -3,4 +3,4 @@ In this moment, I am thinking about personality mirroring and the performance of
 Looking with no expectation of finding,
 SD
 
-*NOTE: I made some backend changes to the structure of my subscriber list because some folks had subscribed but weren’t receiving the emails. If you’re one of them, and this is the first email you’ve seen in a while, or ever, feel free to catch up in the [Archive](https://www.12fps.com) and expect a higher rate of Frames this week as I get caught up.*
+*NOTE: I made some backend changes to the structure of my subscriber list because some folks had subscribed but weren’t receiving the emails. If you’re one of them, and this is the first email you’ve seen in a while, or ever, feel free to catch up in the [Archive](/archive/) and expect a higher rate of Frames this week as I get caught up.*

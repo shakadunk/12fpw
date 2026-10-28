@@ -79,8 +79,11 @@ function loadPosts() {
 const paragraphs = (text) => text.split(/\n{2,}/).filter(Boolean).map((p) => {
   const pre = /^\*[^*]([\s\S]*[^*])?\*$/.test(p.trim());
   const body = pre ? p.trim().slice(1, -1) : p;
-  // [words](https://address) becomes a link: underlined, a touch heavier, opens in a new tab (see .text-link in style.css)
-  const html = esc(body).replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) => `<a class="text-link" href="${url}" target="_blank" rel="noopener">${label}</a>`);
+  // [words](https://address) becomes a link: underlined, a touch heavier, opens in a new tab (see .text-link in style.css);
+  // [words](/archive/) is a link to a page on this site and opens in the same tab
+  const html = esc(body).replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g, (m, label, url) => (url[0] === '/'
+    ? `<a class="text-link" href="${url}">${label}</a>`                                                    // a page on this site: same tab
+    : `<a class="text-link" href="${url}" target="_blank" rel="noopener">${label}</a>`));
   return `<p${pre ? ' class="preface"' : ''}>${html.replace(/\n/g, '<br>')}</p>`;
 }).join('\n');
 // Each image links to a Google reverse-image search (Google Lens) of that image, so viewers can trace where it came from.
