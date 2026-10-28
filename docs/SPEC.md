@@ -6,7 +6,7 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 ## Status
 - DONE (live on Vercel at 12fpw.vercel.app; the first real posts, ALL OF 2023 (Weeks 1 to 52) is in; the 12 placeholder demo posts were deleted on 2026-10-27, so only real posts remain): black site whose home page is a scrolling feed (latest post first, infinite scroll), an archive with GRID (every image of every week) and CALENDAR (hero thumbnails by month) views, a page for each week, light/dark toggle, ARCHIVE dropdown in the header, scroll-up bar (ARCHIVE / TOP / LIGHT) on every page, signup form parked (hidden everywhere until a new spot is chosen), `scripts/add-post.mjs` to make a post from 12 images + text.
 - WORKFLOW: Shaka describes a change, Claude confirms details, edits, tests, and pushes to the GitHub repo; Vercel redeploys automatically. Claude can push to shakadunk/12fpw (the Claude GitHub App is installed on the repo).
-- TO BUILD: backfill of the old posts, private upload page, email rendering, sending via Resend, signup endpoint, moving 12fpw.com to Vercel.
+- TO BUILD: (backfill of 2023 is DONE, 52 of 52; ask Shaka whether any 2024 posts from the old Mailchimp days still need adding), year headings in the archive when 2024 starts, private upload page, email rendering, sending via Resend, signup endpoint, moving 12fpw.com to Vercel.
 
 ## Old template (from Week 3 and Week 4)
 - White background, one centered column about 600px wide, Helvetica/Arial.
@@ -82,7 +82,7 @@ Repo: github.com/shakadunk/12fpw. Domain: 12fpw.com (currently serving the Mailc
 ## Still open
 - Revisit the scroll-up bar (see above) once the backfill is in
 - Where the signup form goes (parked; hidden on every page until Shaka picks a spot)
-- Any skipped weeks in 2023 and early 2024
+- Any 2024 posts to backfill from the old newsletter (the first plan said it ran into early 2024)? 2023 is complete: 52 of 52 (Week 29 images only, never sent)
 - Phones: the date at the end of the feed is not fixed (desktop only); ask Shaka if he wants it fixed there too
 - How to get the 60 posts' content out (PDF per post, or original files)
 - Approval UX: preview link plus an Approve button on the upload page
