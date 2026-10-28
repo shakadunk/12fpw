@@ -98,8 +98,12 @@ function postArticle(p, { eager = false, heading = 'h2' } = {}) {
     <${heading} class="week"><a href="${p.url}">${esc(weekLabel(p))}</a> <span class="year">${p.year}</span></${heading}>
   </header>
 ${p.text ? `  <div class="text">\n${paragraphs(p.text)}\n  </div>\n` : ''}${p.images.map((im, i) => {
-    const img = `<img src="${p.url}${esc(im.file)}" alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async">`;
-    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${im.href ? `<a class="img-link" href="${esc(im.href)}" target="_blank" rel="noopener">${img}</a>` : im.href === false ? img : cfg.siteUrl && p.lens ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + im.file))}" target="_blank" rel="noopener">${img}</a>` : img}</figure>`;
+    // lighter copies (scripts/variants.mjs): phone size (m) and desktop size (l); the browser downloads only the one it needs
+    const sizes = [im.m, im.l].filter(Boolean);
+    const srcset = sizes.length ? ` srcset="${sizes.map((v) => `${p.url}${esc(v.file)} ${v.w}w`).join(', ')}" sizes="(min-width: 720px) 640px, 100vw"` : '';
+    const src = (im.l || im.m || im).file;
+    const img = `<img src="${p.url}${esc(src)}"${srcset} alt="${esc(im.alt || `Image ${i + 1} of ${p.images.length}, ${weekLabel(p)} ${p.year}`)}"${dims(im.w, im.h)} loading="${eager && i === 0 ? 'eager' : 'lazy'}" decoding="async">`;
+    return `  <figure id="img-${p.year}-${p.week}-${i + 1}">${im.href ? `<a class="img-link" href="${esc(im.href)}" target="_blank" rel="noopener">${img}</a>` : im.href === false ? img : cfg.siteUrl && p.lens ? `<a class="img-link" href="${esc(lensUrl(cfg.siteUrl + p.url + (im.l || im.m || im).file))}" target="_blank" rel="noopener">${img}</a>` : img}</figure>`;
   }).join('\n')}
 </article>`;
 }

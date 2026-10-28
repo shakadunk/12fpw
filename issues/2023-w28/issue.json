@@ -11,7 +11,11 @@
       "tw": 700,
       "th": 699,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=F8NeBYucGcw"
+      "href": "https://www.youtube.com/watch?v=F8NeBYucGcw",
+      "m": {
+        "file": "01-m.jpg",
+        "w": 1194
+      }
     },
     {
       "file": "02.jpg",
@@ -21,7 +25,11 @@
       "tw": 700,
       "th": 700,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=RDU9inJj5f0"
+      "href": "https://www.youtube.com/watch?v=RDU9inJj5f0",
+      "m": {
+        "file": "02-m.jpg",
+        "w": 1200
+      }
     },
     {
       "file": "03.jpg",
