@@ -14,7 +14,11 @@ def check(name, ok):
 
 build("https://example.test")
 slugs = sorted((d for d in os.listdir(os.path.join(root, "issues")) if d[:4].isdigit()), key=lambda s: (int(s[:4]), int(s.split("-w")[1])), reverse=True)
-y, w = slugs[0].split("-w")
+import json
+def uses_lens(slug):   # a week whose images use the default Google Lens link (not original photography, no custom links)
+    d = json.load(open(os.path.join(root, "issues", slug, "issue.json")))
+    return d.get("lens") is not False and not any(im.get("href") for im in d["images"])
+y, w = next(sl for sl in slugs if uses_lens(sl)).split("-w")
 home = open(os.path.join(root, "dist", y, f"week-{int(w)}", "index.html"), encoding="utf8").read()   # the newest week's own page
 links = re.findall(r'<a class="img-link" href="([^"]+)" target="_blank" rel="noopener"', home)
 check("every one of the 12 images has a link", len(links) == 12)
@@ -29,7 +33,7 @@ check("each link is a Google Lens search of that image's public address, and the
 
 build(None)
 home = open(os.path.join(root, "dist", "index.html"), encoding="utf8").read()
-check("without a site address there are no image links (they would not work)", "img-link" not in home)
+check("without a site address there are no Google Lens links (they would not work)", "lens.google.com" not in home)
 
 # the preface style
 sys.path.insert(0, root)

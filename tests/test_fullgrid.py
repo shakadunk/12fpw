@@ -71,8 +71,14 @@ try:
         q = pos(pg, 5)
         check("that image is centred vertically on the screen after the click-through", q["h"] < q["vh"] - 40 and abs((q["top"] + q["bottom"]) / 2 - q["vh"] / 2) <= 3 and q["y"] > 500)
         # an image taller than the screen lines up just under the top edge instead
-        pg.goto(f"{B}/{newest[0]}/week-{newest[1]}/#img-{newest[0]}-{newest[1]}-7"); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
-        q = pos(pg, 7)
+        import json
+        tall = None   # newest week that has an image taller than the 900px screen at 640px wide
+        for sl in slugs:
+            for i, im in enumerate(json.load(open(os.path.join(proj, "issues", sl, "issue.json")))["images"]):
+                if im["h"] / im["w"] > 1.5: tall = (int(sl[:4]), int(sl.split("-w")[1]), i + 1); break
+            if tall: break
+        pg.goto(f"{B}/{tall[0]}/week-{tall[1]}/#img-{tall[0]}-{tall[1]}-{tall[2]}"); pg.wait_for_load_state("load"); pg.wait_for_timeout(800)
+        q = pg.evaluate(f"(() => {{ const r = document.getElementById('img-{tall[0]}-{tall[1]}-{tall[2]}').getBoundingClientRect(); return {{top: r.top, bottom: r.bottom, h: r.height, vh: innerHeight}}; }})()")
         check("an image taller than the screen starts near the top (about 16px down)", q["h"] > q["vh"] and 8 <= q["top"] <= 24)
         pg.goto(B + "/archive/#grid"); pg.wait_for_load_state("networkidle")
         # deep in the list: an older week
