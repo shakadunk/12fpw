@@ -6,6 +6,10 @@
     {
       "source": "/(.*)\\.(jpg|jpeg|png|webp)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    },
+    {
+      "source": "/v3(/.*)?",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     }
   ]
 }

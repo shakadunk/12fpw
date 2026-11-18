@@ -249,6 +249,95 @@ ${m.items.map(thumbCell).join('\n')}
   });
 }
 
+// ---------- V3 landing (hidden preview at /v3/) ----------
+// A redesign being tried out live: a dense grid of every image, a preview above it, and the week's post
+// opening in place with a zoom. Nothing on the site links here and the page asks not to be indexed.
+// It reuses the same posts and the same image copies as the rest of the site; no V2 page is affected.
+function v3Page(posts) {
+  const years = [...new Set(posts.map((p) => p.year))].sort((a, b) => b - a);
+  // Everything the post view needs, keyed "<year>-<week>". The grid only carries thumbnails.
+  const manifest = {};
+  for (const p of posts) {
+    manifest[`${p.year}-${p.week}`] = {
+      t: p.text ? paragraphs(p.text) : '',
+      i: p.images.map((im) => {
+        const big = (im.l || im.m || im).file;     // desktop copy: preview and post image share this file
+        const small = (im.m || im.l || im).file;   // phone copy, used the same way on narrow screens
+        const e = { u: p.url + big, w: im.w || 0, h: im.h || 0 };
+        if (small !== big) e.s = p.url + small;
+        const href = im.href ? im.href : im.href === false ? null : cfg.siteUrl && p.lens ? lensUrl(cfg.siteUrl + p.url + big) : null;
+        if (href) e.l = href;
+        return e;
+      }),
+    };
+  }
+  const section = (year) => `  <div class="year-section" data-year="${year}">
+    <div class="year-header">${year}</div>
+${posts.filter((p) => p.year === year).map((p) => `    <div class="week-row">
+      <div class="week-num">${p.week}</div>
+      <ul class="week-images">
+${p.images.map((im, i) => `        <li class="grid-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
+      </ul>
+    </div>`).join('\n')}
+  </div>`;
+
+  return `<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${esc(cfg.name)} — V3 preview</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/v3.css">
+<script>
+(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
+</head>
+<body>
+
+<div class="site-desc">
+  <span class="site-title">${esc(cfg.name)}</span>
+  ${esc(cfg.blurb || 'Twelve images, once a week. No ads. No spam.')}
+</div>
+
+<div class="header-right">
+  <div class="year-filters">
+    <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
+${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
+  </div>
+  <button type="button" class="theme-toggle" id="themeToggle">LIGHT</button>
+</div>
+
+<div class="hover-preview" id="hoverPreview"><img id="previewImg" src="" alt=""></div>
+<div class="tap-scrim" id="tapScrim"></div>
+<div class="top-overlay"></div>
+
+<div class="archive" id="archive">
+${years.map(section).join('\n')}
+</div>
+
+<div class="v3-badge">V3 PREVIEW</div>
+
+<div class="post-scrim" id="postScrim"></div>
+<div class="post-view" id="postView" role="dialog" aria-label="Week" aria-hidden="true" tabindex="-1">
+  <button type="button" class="post-back" id="postBack">&larr; ARCHIVE</button>
+  <div class="post-inner">
+    <h1 class="post-head" id="postHead"></h1>
+    <div class="post-text" id="postText" hidden></div>
+    <div class="post-stack" id="postStack"></div>
+  </div>
+</div>
+
+<script type="application/json" id="v3data">${JSON.stringify(manifest).replace(/</g, '\\u003c')}</script>
+<script src="/v3.js" defer></script>
+</body>
+</html>
+`;
+}
+
 function postPage(p, newer, older) {
   const nav = (q, dir) => (q ? `<a href="${q.url}">${dir === 'older' ? '← ' : ''}${esc(weekLabel(q))}, ${q.year}${dir === 'newer' ? ' →' : ''}</a>` : '<span></span>');
   return layout({
@@ -275,6 +364,7 @@ for (const p of posts) { if (seen.has(p.url)) console.warn(`! duplicate post URL
 
 write('index.html', homePage(posts));
 write('archive/index.html', archivePage(posts));
+write('v3/index.html', v3Page(posts));   // hidden redesign preview; nothing links to it
 posts.forEach((p, i) => {
   write(`${p.url.slice(1)}index.html`, postPage(p, posts[i - 1], posts[i + 1]));
   for (const f of fs.readdirSync(p.dir)) {

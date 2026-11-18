@@ -1,0 +1,364 @@
+/* V3 landing (hidden preview at /v3/). Self-contained: this page does not load style.css.
+   Desktop: blank top zone + hover preview above a dense grid (clintonvanarnam.net-inspired).
+   Phones: no blank zone, grid starts at the top, 4 rows of 3 per week, tap to preview, tap again to open. */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #000; --fg: #fff; --text: #f0f0f0; --mute: #8a8a8a;
+  --line: #333; --ph: #111;
+  --font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  /* Height of the blank top zone. Fallback only; v3.js measures it so ~1.5 rows show at the bottom. */
+  --overlay-h: 85vh;
+  /* Easing for the open transition: gentle start, soft landing. Tweak here. */
+  --ease-open: cubic-bezier(.4, 0, .2, 1);
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #fff; --fg: #000; --text: #111; --mute: #6e6e6e;
+  --line: #d8d8d8; --ph: #eee;
+  color-scheme: light;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+body { -webkit-text-size-adjust: 100%; }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* === FIXED HEADER ELEMENTS === */
+
+.site-desc {
+  position: fixed;
+  top: 32px;
+  left: 32px;
+  z-index: 110;
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mute);
+}
+.site-desc .site-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  display: block;
+  margin-bottom: 6px;
+  text-decoration: none;
+}
+.site-desc a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.site-desc .site-title { color: var(--fg); }
+
+.header-right {
+  position: fixed;
+  top: 32px;
+  right: 32px;
+  z-index: 110;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.year-filters { display: flex; flex-direction: column; gap: 4px; text-align: right; }
+.year-filters button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--mute);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: right;
+  transition: color .15s;
+}
+.year-filters button:hover,
+.year-filters button.active { color: var(--fg); }
+
+.theme-toggle {
+  font: inherit;
+  font-size: 13px;
+  color: var(--mute);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: color .15s;
+  user-select: none;
+}
+.theme-toggle:hover { color: var(--fg); }
+
+/* === PREVIEW (hover on desktop, tap on phones) === */
+.hover-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--overlay-h);
+  z-index: 105;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 320px;
+}
+.hover-preview img { display: block; width: 90%; height: 90%; object-fit: contain; }
+.hover-preview.visible { opacity: 1; }
+
+/* Blurs the grid behind the tapped photo on phones. Unused on desktop (the blank zone does that job). */
+.tap-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 104;
+  opacity: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition: opacity .22s ease, backdrop-filter .22s ease, -webkit-backdrop-filter .22s ease;
+}
+.tap-scrim.on {
+  opacity: 1;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+}
+
+/* === BLANK TOP ZONE === */
+.top-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--overlay-h);
+  background: var(--bg);
+  z-index: 99;
+  pointer-events: none;
+}
+
+/* === GRID ARCHIVE === */
+.archive {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--overlay-h);
+  padding: 0 32px 120px;
+}
+
+.year-section { display: grid; grid-template-columns: 48px 1fr; margin-bottom: 48px; }
+.year-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  grid-column: 1;
+  grid-row: 1 / span 100;
+  position: sticky;
+  top: calc(var(--overlay-h) + 3px);   /* just below the blank zone, which covers anything above it */
+  align-self: start;
+  z-index: 50;
+}
+.week-row {
+  grid-column: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 0;
+}
+.week-num {
+  flex-shrink: 0;
+  width: 28px;
+  font-size: 11px;
+  color: var(--mute);
+  text-align: right;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.week-images {
+  list-style: none;
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.grid-cell { flex: 1; min-width: 0; }
+.grid-cell img {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: pointer;
+  transition: opacity .15s;
+  background: var(--ph);
+}
+.grid-cell img:hover { opacity: .7; }
+
+/* === POST VIEW === */
+.post-view {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.post-view.open { display: block; }
+.post-view.shown { opacity: 1; transition: opacity .3s var(--ease-open) .25s; }
+.post-view.instant, .post-view.instant.shown { transition: none; }
+.post-view:focus { outline: none; }
+
+.post-back {
+  position: fixed;
+  top: 32px;
+  left: 32px;
+  z-index: 310;
+  font: inherit;
+  font-size: 13px;
+  color: var(--mute);
+  background: var(--bg);
+  border: 0;
+  padding: 2px 6px 2px 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+.post-back:hover { color: var(--fg); }
+
+.post-inner { max-width: 880px; margin: 0 auto; padding: 96px 32px 50vh; }
+.post-head { text-align: center; font-size: 13px; font-weight: 600; color: var(--fg); }
+.post-head .post-year { color: var(--mute); font-weight: 400; }
+.post-text {
+  max-width: 560px;
+  margin: 28px auto 40px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--mute);
+}
+.post-text p + p { margin-top: 1em; }
+.post-text .preface { font-style: italic; }
+.post-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.post-stack { display: flex; flex-direction: column; gap: 21px; }
+.post-stack img { display: block; width: 100%; height: auto; background: var(--ph); }
+.post-stack a { display: block; }
+/* Just after the post opens, a stray second tap must not fire the image's reverse-image link */
+.post-stack.guard a { pointer-events: none; }
+
+/* Blur/fade layer shown behind the post while it opens */
+.post-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 290;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition: opacity .25s ease, backdrop-filter .25s ease, -webkit-backdrop-filter .25s ease;
+}
+.post-scrim.fx {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: opacity .5s var(--ease-open), backdrop-filter .5s var(--ease-open), -webkit-backdrop-filter .5s var(--ease-open);
+}
+
+/* The flying copy of the image: starts at the preview size and lands on the post image */
+.post-fly {
+  position: fixed;
+  z-index: 400;
+  display: block;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.v3-badge {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 200;
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--mute);
+  background: var(--bg);
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  opacity: .45;
+  pointer-events: none;
+}
+
+/* === PHONES === */
+/* No blank top zone: the grid starts at the top. 12 images per week as 4 rows of 3, uncropped. */
+@media (max-width: 719px) {
+  .top-overlay { display: none; }
+
+  .site-desc {
+    position: static;
+    max-width: none;
+    padding: 18px 14px 2px;
+    font-size: 12.5px;
+  }
+  .header-right {
+    position: static;
+    padding: 10px 14px 14px;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .year-filters { flex-direction: row; gap: 16px; text-align: left; }
+  .year-filters button { text-align: left; }
+
+  .archive { margin-top: 0; padding: 0 10px 72px; }
+
+  .year-section { grid-template-columns: 1fr; margin-bottom: 26px; }
+  .year-header {
+    grid-column: 1;
+    grid-row: auto;
+    top: 0;
+    padding: 7px 0 5px;
+    background: var(--bg);
+    z-index: 50;
+  }
+  .week-row { grid-column: 1; display: block; padding: 0 0 16px; }
+  .week-num { width: auto; text-align: left; padding: 0 0 5px; font-size: 11px; }
+  .week-images {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    align-items: start;
+  }
+  .grid-cell { flex: none; }
+  .grid-cell img:hover { opacity: 1; }   /* no hover on a touch screen; the tap state does the work */
+  .grid-cell img.tapped { opacity: .45; }
+
+  /* The tapped photo comes to the foreground, centred, over the blurred grid */
+  .hover-preview {
+    top: 0;
+    height: 100%;
+    padding: 56px 14px;
+  }
+  .hover-preview img { width: 100%; height: 100%; }
+  .hover-preview.visible { pointer-events: auto; }
+
+  .post-inner { padding: 60px 12px 40vh; }
+  .post-text { font-size: 14.5px; margin: 22px auto 30px; }
+  .post-stack { gap: 14px; }
+  .post-back { top: 14px; left: 12px; padding: 6px 10px 6px 0; }
+  .v3-badge { bottom: 10px; left: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-preview, .tap-scrim, .post-view, .post-scrim { transition: none; }
+}
