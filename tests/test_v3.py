@@ -195,6 +195,23 @@ with sync_playwright() as pw:
     check("the address is back at the archive", land["hash"] in ("", "#"), land["hash"])
     pg.screenshot(path=os.path.join(shots, "v3-desktop-landed-back.png"))
 
+    # the same on a post opened from a shared link (no grid click behind it)
+    pg.goto(B + "/v3/#2024-w3-i1", wait_until="load")
+    pg.wait_for_timeout(1500)
+    pg.evaluate("() => document.getElementById('postStack').children[7].scrollIntoView({block: 'center'})")
+    pg.wait_for_timeout(500)
+    pg.click("#postBack")
+    pg.wait_for_timeout(250)
+    check("a shared link also zooms back out", pg.evaluate("() => !!document.querySelector('.post-fly')"))
+    pg.wait_for_timeout(1300)
+    dl2 = pg.evaluate("""() => {
+      const d = JSON.parse(document.getElementById('v3data').textContent);
+      const i = document.getElementById('previewImg');
+      return {open: document.getElementById('postView').classList.contains('open'),
+              visible: document.getElementById('hoverPreview').classList.contains('visible'),
+              match: i.src === new URL(d['2024-3'].i[7].u, location.href).href}; }""")
+    check("and lands on image 8 in the preview zone", not dl2["open"] and dl2["visible"] and dl2["match"], dl2)
+
     # the browser Back button does the same, and hovering another thumbnail takes over again
     t4 = pg.locator('.grid-cell img[data-k="2023-40"][data-n="4"]')
     t4.scroll_into_view_if_needed(); t4.hover(); pg.wait_for_timeout(400); t4.click(); pg.wait_for_timeout(1300)

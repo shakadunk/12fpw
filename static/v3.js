@@ -360,6 +360,7 @@
   }
 
   function closePostView() {
+    if (postView.classList.contains('leaving')) return;   // already flying home; a second call would cancel it
     if (!postView.classList.contains('open')) {
       removeFly();
       currentKey = ''; openedFromGrid = false; currentPost = null; currentPostKey = '';
@@ -454,8 +455,9 @@
   window.addEventListener('scroll', function () { if (tapped && Date.now() > ignoreScrollUntil) hidePreview(); }, { passive: true });
 
   function leavePost() {
-    if (openedFromGrid) history.back();   // drops the #hash entry; hashchange then closes the view
-    else { location.hash = ''; route(); }
+    if (openedFromGrid) history.back();        // drops the #hash entry; hashchange then closes the view
+    else if (location.hash) location.hash = '';   // let the hashchange do the routing, exactly once
+    else route();
   }
   postBack.addEventListener('click', function (e) { e.preventDefault(); leavePost(); });
   document.addEventListener('keydown', function (e) {
