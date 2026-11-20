@@ -98,6 +98,36 @@ with sync_playwright() as pw:
     check("page behind is blurred and darkened", po["scrim"])
     pg.screenshot(path=os.path.join(shots, "v3-desktop-post.png"))
 
+    # a tall portrait must land at the size it had in the preview: no scaling, never taller than the screen
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(600)
+    portrait = pg.locator('.grid-cell img[data-k="2024-9"][data-n="1"]')
+    portrait.hover()
+    pg.wait_for_timeout(500)
+    before = pg.evaluate("""() => {
+      const i = document.getElementById('previewImg'), b = i.getBoundingClientRect();
+      const s = Math.min(b.width / i.naturalWidth, b.height / i.naturalHeight);
+      return {w: i.naturalWidth * s, h: i.naturalHeight * s, boxW: b.width, boxH: b.height, vh: innerHeight};
+    }""")
+    portrait.click()
+    pg.wait_for_timeout(1500)
+    after = pg.evaluate("""() => {
+      const r = document.getElementById('postStack').children[0];
+      const img = r.tagName === 'IMG' ? r : r.querySelector('img');
+      const b = img.getBoundingClientRect();
+      const all = [...document.querySelectorAll('#postStack img')].map(i => i.getBoundingClientRect());
+      return {w: b.width, h: b.height, maxH: Math.max(...all.map(x => x.height)), maxW: Math.max(...all.map(x => x.width)),
+              ratioOk: Math.abs(b.width / b.height - img.naturalWidth / img.naturalHeight) < 0.01};
+    }""")
+    check("portrait is tall in the preview (taller than wide)", before["h"] > before["w"], before)
+    check("post image has the same width as in the preview", abs(after["w"] - before["w"]) < 2, (before, after))
+    check("post image has the same height as in the preview", abs(after["h"] - before["h"]) < 2, (before, after))
+    check("no post image taller than the preview box", after["maxH"] <= before["boxH"] + 1, (after, before))
+    check("no post image wider than the preview box", after["maxW"] <= before["boxW"] + 1, (after, before))
+    check("no post image taller than the screen", after["maxH"] <= before["vh"], (after, before))
+    check("post image keeps its true proportions", after["ratioOk"], after)
+    pg.screenshot(path=os.path.join(shots, "v3-desktop-portrait-post.png"))
+
     # a stray second click right after opening must not fire the image link
     guard = pg.evaluate("() => document.getElementById('postStack').classList.contains('guard')")
     check("link guard has lifted by now (600ms)", not guard)

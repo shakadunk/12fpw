@@ -311,7 +311,7 @@ ${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="f
   <button type="button" class="theme-toggle" id="themeToggle">LIGHT</button>
 </div>
 
-<div class="hover-preview" id="hoverPreview"><img id="previewImg" src="" alt=""></div>
+<div class="hover-preview" id="hoverPreview"><img id="previewImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""></div>
 <div class="tap-scrim" id="tapScrim"></div>
 <div class="top-overlay"></div>
 

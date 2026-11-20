@@ -235,8 +235,8 @@ body { -webkit-text-size-adjust: 100%; }
 }
 .post-back:hover { color: var(--fg); }
 
-.post-inner { max-width: 880px; margin: 0 auto; padding: 96px 32px 50vh; }
-.post-head { text-align: center; font-size: 13px; font-weight: 600; color: var(--fg); }
+.post-inner { margin: 0 auto; padding: 96px 32px 50vh; }
+.post-head { text-align: center; font-size: 13px; font-weight: 600; color: var(--fg); margin-bottom: 28px; }   /* weeks without text: keeps the heading off the first photo */
 .post-head .post-year { color: var(--mute); font-weight: 400; }
 .post-text {
   max-width: 560px;
@@ -248,8 +248,10 @@ body { -webkit-text-size-adjust: 100%; }
 .post-text p + p { margin-top: 1em; }
 .post-text .preface { font-style: italic; }
 .post-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.post-stack { display: flex; flex-direction: column; gap: 21px; }
-.post-stack img { display: block; width: 100%; height: auto; background: var(--ph); }
+/* Each image is drawn at exactly the size it has in the preview (v3.js layoutPost sets its width and height),
+   so the zoom from the preview to the post is a pure move: no scaling, and nothing taller than the preview. */
+.post-stack { display: flex; flex-direction: column; align-items: center; gap: 21px; }
+.post-stack img { display: block; max-width: 100%; background: var(--ph); }
 .post-stack a { display: block; }
 /* Just after the post opens, a stray second tap must not fire the image's reverse-image link */
 .post-stack.guard a { pointer-events: none; }

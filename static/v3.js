@@ -179,6 +179,37 @@
   // ---------- post view ----------
   var currentKey = '';
   var openedFromGrid = false;
+  var currentPost = null;
+
+  // The post images are drawn at exactly the size they have in the preview: the image fitted inside the
+  // preview's picture box, never enlarged past it. So the zoom has nothing to scale, and a tall portrait
+  // can never grow beyond the screen. (The preview box is measured even while the preview is hidden.)
+  function layoutPost() {
+    if (!currentPost) return;
+    var b = previewImg.getBoundingClientRect();
+    // on a narrow desktop window the preview box can be tiny; keep a sensible floor
+    var w = Math.min(Math.max(b.width, Math.min(window.innerWidth - 48, 560)), postStack.clientWidth || 9999);
+    var h = b.height;
+    var imgs = postStack.querySelectorAll('img');
+    for (var i = 0; i < imgs.length; i++) {
+      var im = currentPost.i[i];
+      if (im && im.w && im.h) {
+        var s = Math.min(w / im.w, h / im.h);
+        imgs[i].style.width = (im.w * s) + 'px';
+        imgs[i].style.height = (im.h * s) + 'px';
+      } else {
+        imgs[i].style.width = w + 'px';
+        imgs[i].style.height = 'auto';
+        imgs[i].style.maxHeight = h + 'px';
+      }
+    }
+  }
+  var layoutQueued = false;
+  window.addEventListener('resize', function () {
+    if (layoutQueued || !postView.classList.contains('open')) return;
+    layoutQueued = true;
+    requestAnimationFrame(function () { layoutQueued = false; layoutPost(); });
+  });
 
   function showPost(year, week, imageNum) {
     var fly = pendingFly;
@@ -201,7 +232,6 @@
       var img = document.createElement('img');
       img.src = bigOf(im);
       img.alt = 'Image ' + (i + 1) + ' of ' + post.i.length + ', Week ' + (+week) + ' ' + year;
-      if (im.w && im.h) img.style.aspectRatio = im.w + ' / ' + im.h;   // reserves space so nothing shifts while it decodes
       img.loading = i < 2 ? 'eager' : 'lazy';
       img.decoding = 'async';
       var node = img;
@@ -225,6 +255,8 @@
     postView.classList.add('open');
     postView.setAttribute('aria-hidden', 'false');
     postView.scrollTop = 0;
+    currentPost = post;
+    layoutPost();   // sizes every image like the preview, so the space is reserved before anything decodes
 
     // Scroll so the chosen image's centre lands on the window's centre
     var n = Math.min(Math.max(imageNum, 1), post.i.length);
@@ -258,6 +290,7 @@
     removeFly();
     currentKey = '';
     openedFromGrid = false;
+    currentPost = null;
     if (!postView.classList.contains('open')) return;
     postView.classList.remove('shown', 'instant');
     postScrim.classList.remove('fx');
