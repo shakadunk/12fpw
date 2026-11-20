@@ -58,15 +58,43 @@
   sizeOverlay();
 
   // ---------- theme ----------
+  // The page follows the device's own light or dark setting (set before paint, in the page's head).
+  // Tapping the toggle overrides that for this person, on this device, and is remembered. Setting it back
+  // to whatever the device is doing clears the override, so it follows the device again from then on.
   var toggle = document.getElementById('themeToggle');
-  function paintToggle() { toggle.textContent = html.getAttribute('data-theme') === 'dark' ? 'LIGHT' : 'DARK'; }
-  paintToggle();
+  var mqLight = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+  function systemTheme() { return mqLight && mqLight.matches ? 'light' : 'dark'; }
+  function savedTheme() { try { var t = localStorage.getItem('theme'); return (t === 'light' || t === 'dark') ? t : null; } catch (e) { return null; } }
+
+  function paintTheme() {
+    var dark = html.getAttribute('data-theme') !== 'light';
+    toggle.textContent = dark ? 'LIGHT' : 'DARK';
+    toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#000000' : '#ffffff');   // the browser's own bars, on a phone
+  }
+  paintTheme();
+
   toggle.addEventListener('click', function () {
     var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
-    try { localStorage.setItem('theme', next); } catch (e) {}
-    paintToggle();
+    try {
+      if (next === systemTheme()) localStorage.removeItem('theme');   // back in step with the device: follow it again
+      else localStorage.setItem('theme', next);
+    } catch (e) {}
+    paintTheme();
   });
+
+  // The device can change on its own (a schedule, or sunset). Follow it, unless this person has chosen.
+  if (mqLight) {
+    var onSystem = function () {
+      if (savedTheme()) return;
+      html.setAttribute('data-theme', systemTheme());
+      paintTheme();
+    };
+    if (mqLight.addEventListener) mqLight.addEventListener('change', onSystem);
+    else if (mqLight.addListener) mqLight.addListener(onSystem);
+  }
 
   // ---------- year filter ----------
   [].forEach.call(document.querySelectorAll('.year-filters button'), function (b) {

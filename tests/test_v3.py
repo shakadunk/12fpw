@@ -349,6 +349,55 @@ with sync_playwright() as pw:
       || document.getElementById('tapScrim').classList.contains('on')"""))
 
     ph.close()
+
+    # ---------------- light / dark follows the device ----------------
+    for scheme, want in (("light", "light"), ("dark", "dark")):
+        tp = br.new_page(viewport={"width": 1280, "height": 800}, color_scheme=scheme)
+        tp.goto(B + "/v3/", wait_until="load")
+        tp.wait_for_timeout(500)
+        t = tp.evaluate("""() => ({theme: document.documentElement.dataset.theme,
+          label: document.getElementById('themeToggle').textContent.trim(),
+          bar: document.querySelector('meta[name=theme-color]').content,
+          bg: getComputedStyle(document.body).backgroundColor,
+          saved: localStorage.getItem('theme')})""")
+        check("a device set to " + scheme + " opens in " + want, t["theme"] == want, t)
+        check("nothing is saved until the person chooses (" + scheme + ")", t["saved"] is None, t)
+        check("the browser bar colour matches (" + scheme + ")",
+              t["bar"] == ("#ffffff" if want == "light" else "#000000"), t)
+        check("the toggle offers the other one (" + scheme + ")",
+              t["label"] == ("DARK" if want == "light" else "LIGHT"), t)
+
+        # choosing the other one sticks across a reload
+        tp.click("#themeToggle")
+        tp.wait_for_timeout(200)
+        other = "dark" if want == "light" else "light"
+        o = tp.evaluate("() => ({theme: document.documentElement.dataset.theme, saved: localStorage.getItem('theme')})")
+        check("tapping it switches and is remembered (" + scheme + ")", o["theme"] == other and o["saved"] == other, o)
+        tp.reload(wait_until="load")
+        tp.wait_for_timeout(400)
+        check("the choice survives a reload (" + scheme + ")",
+              tp.evaluate("() => document.documentElement.dataset.theme") == other)
+
+        # setting it back to what the device is doing goes back to following the device
+        tp.click("#themeToggle")
+        tp.wait_for_timeout(200)
+        b2 = tp.evaluate("() => ({theme: document.documentElement.dataset.theme, saved: localStorage.getItem('theme')})")
+        check("setting it back to the device's own mode follows the device again (" + scheme + ")",
+              b2["theme"] == want and b2["saved"] is None, b2)
+        tp.close()
+
+    # a device that changes on its own is followed, until the person has chosen
+    tp = br.new_page(viewport={"width": 1280, "height": 800}, color_scheme="dark")
+    tp.goto(B + "/v3/", wait_until="load"); tp.wait_for_timeout(400)
+    tp.emulate_media(color_scheme="light"); tp.wait_for_timeout(400)
+    check("the page follows the device when it changes",
+          tp.evaluate("() => document.documentElement.dataset.theme") == "light")
+    tp.click("#themeToggle"); tp.wait_for_timeout(200)          # explicitly choose dark
+    tp.emulate_media(color_scheme="dark"); tp.wait_for_timeout(400)
+    tp.emulate_media(color_scheme="light"); tp.wait_for_timeout(400)
+    check("but a chosen theme is not overridden by the device",
+          tp.evaluate("() => document.documentElement.dataset.theme") == "dark")
+    tp.close()
     br.close()
 
 srv.terminate()

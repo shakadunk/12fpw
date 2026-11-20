@@ -282,7 +282,7 @@ ${p.images.map((im, i) => `        <li class="grid-cell"><img src="${p.url}${esc
   </div>`;
 
   return `<!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -293,7 +293,11 @@ ${p.images.map((im, i) => `        <li class="grid-cell"><img src="${p.url}${esc
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/v3.css">
 <script>
-(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}})();
+/* Follow the device's own light or dark setting, unless this person has chosen one here.
+   Runs before the page is painted, so there is no flash of the wrong theme. */
+(function(){var d=document.documentElement,t=null;try{t=localStorage.getItem('theme');}catch(e){}
+var sys=window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+d.dataset.theme=(t==='light'||t==='dark')?t:sys;})();
 </script>
 </head>
 <body>
