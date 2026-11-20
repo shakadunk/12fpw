@@ -274,7 +274,7 @@ function v3Page(posts) {
   const section = (year) => `  <div class="year-section" data-year="${year}">
     <div class="year-header">${year}</div>
 ${posts.filter((p) => p.year === year).map((p) => `    <div class="week-row">
-      <div class="week-num">${p.week}</div>
+      <div class="week-num"><b>${p.week}</b> <span>${p.year}</span></div>
       <ul class="week-images">
 ${p.images.map((im, i) => `        <li class="grid-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
       </ul>
@@ -316,7 +316,6 @@ ${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="f
 </div>
 
 <div class="hover-preview" id="hoverPreview"><img id="previewImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""></div>
-<div class="tap-scrim" id="tapScrim"></div>
 <div class="top-overlay"></div>
 
 <div class="archive" id="archive">

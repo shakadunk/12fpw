@@ -252,120 +252,98 @@ with sync_playwright() as pw:
     pg.close()
 
     # ---------------- phone ----------------
+    # Its own layout: one tap opens the week, and the archive is the 3x4 square block used elsewhere.
     ph = br.new_page(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
     ph.goto(B + "/v3/", wait_until="load")
     ph.wait_for_timeout(1200)
     m = ph.evaluate("""() => {
-      const row = document.querySelector('.week-row');
-      const ul = row.querySelector('.week-images');
-      const cs = getComputedStyle(ul);
-      const cells = [...ul.querySelectorAll('img')].map(i => i.getBoundingClientRect());
+      const row = document.querySelector('.week-row'), ul = row.querySelector('.week-images');
+      const cells = [...ul.querySelectorAll('.grid-cell')].map(c => c.getBoundingClientRect());
       const tops = [...new Set(cells.map(c => Math.round(c.top)))];
+      const sq = cells.every(c => Math.abs(c.width - c.height) < 1.5);
       return {topOverlay: getComputedStyle(document.querySelector('.top-overlay')).display,
+              preview: getComputedStyle(document.getElementById('hoverPreview')).display,
               archiveTop: document.getElementById('archive').getBoundingClientRect().top,
-              cols: cs.gridTemplateColumns.split(' ').length,
-              rows: tops.length, count: cells.length,
-              heights: cells.slice(0, 6).map(c => Math.round(c.height)),
-              widths: cells.slice(0, 3).map(c => Math.round(c.width)),
-              overflow: document.documentElement.scrollWidth > innerWidth + 1};
-    }""")
+              cols: getComputedStyle(ul).gridTemplateColumns.split(' ').length,
+              rows: tops.length, count: cells.length, square: sq,
+              label: row.querySelector('.week-num').innerText.replace(/\\s+/g, ' ').trim(),
+              yearHeader: getComputedStyle(document.querySelector('.year-header')).display,
+              overflow: document.documentElement.scrollWidth > innerWidth + 1}; }""")
     check("no blank zone on a phone", m["topOverlay"] == "none", m["topOverlay"])
+    check("no preview zone on a phone either", m["preview"] == "none", m["preview"])
     check("grid starts near the top", m["archiveTop"] < 300, m["archiveTop"])
     check("3 across", m["cols"] == 3, m["cols"])
     check("4 rows of 3 per week", m["rows"] == 4 and m["count"] == 12, (m["rows"], m["count"]))
-    check("ratios kept uncropped (heights differ)", len(set(m["heights"])) > 1, m["heights"])
+    check("square cells, like the rest of the site on a phone", m["square"], m)
+    check("each week's label carries its week and year", m["label"] == "9 2024", m["label"])
+    check("so the sticky year label is not needed", m["yearHeader"] == "none", m["yearHeader"])
     check("no sideways scrolling at 390", not m["overflow"])
     ph.screenshot(path=os.path.join(shots, "v3-phone-landing.png"))
 
-    # first tap brings the photo forward over the blurred grid
+    # the years and the theme stay reachable down a very long page
+    ph.mouse.wheel(0, 4000); ph.wait_for_timeout(600)
+    bar = ph.evaluate("""() => {
+      const b = document.querySelector('.header-right').getBoundingClientRect();
+      return {top: Math.round(b.top), scrolled: Math.round(scrollY),
+              opaque: getComputedStyle(document.querySelector('.header-right')).backgroundColor}; }""")
+    check("the year filter stays at the top while you scroll", bar["scrolled"] > 1000 and bar["top"] <= 1, bar)
+    check("and is opaque, so photos do not show through", "rgba(0, 0, 0, 0)" != bar["opaque"], bar)
+    ph.evaluate("() => scrollTo(0, 0)"); ph.wait_for_timeout(400)
+
+    # one tap opens the week at that image: no preview step
     t5 = ph.locator('.grid-cell img[data-k="2024-5"][data-n="5"]')
-    t5.scroll_into_view_if_needed()
-    ph.wait_for_timeout(300)
+    t5.scroll_into_view_if_needed(); ph.wait_for_timeout(300)
     t5.tap()
-    ph.wait_for_timeout(600)
-    tp = ph.evaluate("""() => {
-      const p = document.getElementById('hoverPreview'), i = document.getElementById('previewImg');
-      const s = document.getElementById('tapScrim');
-      return {visible: p.classList.contains('visible'), scrim: s.classList.contains('on'),
-              blur: getComputedStyle(s).backdropFilter, src: i.getAttribute('src'),
-              post: document.getElementById('postView').classList.contains('open')};
-    }""")
-    check("first tap brings the photo forward", tp["visible"])
-    check("grid behind it is blurred", tp["scrim"] and "blur" in (tp["blur"] or ""), tp["blur"])
-    check("first tap does not open the week", not tp["post"])
-    check("phone preview uses the phone copy", tp["src"] and not tp["src"].endswith("-t.jpg"), tp["src"])
-    ph.screenshot(path=os.path.join(shots, "v3-phone-tapped.png"))
-
-    # a tap in the blurred space beside a letterboxed photo goes back, it does not open the week
-    box = ph.evaluate("""() => {
-      const i = document.getElementById('previewImg'), b = i.getBoundingClientRect();
-      const s = Math.min(b.width / i.naturalWidth, b.height / i.naturalHeight);
-      const w = i.naturalWidth * s, h = i.naturalHeight * s;
-      return {elTop: b.top, elLeft: b.left, elW: b.width, elH: b.height,
-              picTop: b.top + (b.height - h) / 2, picLeft: b.left + (b.width - w) / 2, picW: w, picH: h}; }""")
-    gapAbove = box["picTop"] - box["elTop"]
-    check("the photo is letterboxed, so there is empty space inside the image element", gapAbove > 20, box)
-    ph.touchscreen.tap(box["elLeft"] + box["elW"] / 2, box["elTop"] + gapAbove / 2)
-    ph.wait_for_timeout(900)
-    away = ph.evaluate("""() => ({open: document.getElementById('postView').classList.contains('open'),
-      visible: document.getElementById('hoverPreview').classList.contains('visible'),
-      hash: location.hash})""")
-    check("tapping beside the photo does not open the week", not away["open"], away)
-    check("tapping beside the photo puts it back down", not away["visible"], away)
-
-    # second tap opens the week at that image
-    t5.tap(); ph.wait_for_timeout(600)
-    ph.touchscreen.tap(box["picLeft"] + box["picW"] / 2, box["picTop"] + box["picH"] / 2)
-    ph.wait_for_timeout(1400)
+    ph.wait_for_timeout(250)
+    check("the zoom starts straight away", ph.evaluate("() => !!document.querySelector('.post-fly')"))
+    ph.wait_for_timeout(1300)
     mp = ph.evaluate("""() => {
       const st = document.getElementById('postStack');
       const r = st.children[4].getBoundingClientRect();
+      const w = [...st.querySelectorAll('img')].map(i => Math.round(i.getBoundingClientRect().width));
       return {open: document.getElementById('postView').classList.contains('open'),
-              head: document.getElementById('postHead').innerText.replace(/\\s+/g,' ').trim(),
-              off: (r.top + r.height/2) - innerHeight/2, hash: location.hash,
-              scrim: document.getElementById('postScrim').classList.contains('fx')};
-    }""")
-    check("second tap opens the week", mp["open"] and mp["head"] == "Week 5 2024", mp)
-    check("opens centred on the tapped image", abs(mp["off"]) < 60, mp["off"])
+              head: document.getElementById('postHead').innerText.replace(/\\s+/g, ' ').trim(),
+              off: (r.top + r.height / 2) - innerHeight / 2, hash: location.hash,
+              scrim: document.getElementById('postScrim').classList.contains('fx'),
+              preview: document.getElementById('hoverPreview').classList.contains('visible'),
+              widths: [...new Set(w)], col: Math.round(document.getElementById('postStack').clientWidth)}; }""")
+    check("one tap opens that week", mp["open"] and mp["head"] == "Week 5 2024", mp)
+    check("opened at the image that was tapped", abs(mp["off"]) < 60, mp["off"])
+    check("address hash set", mp["hash"] == "#2024-w5-i5", mp["hash"])
     check("same blur/fade on a phone", mp["scrim"])
+    check("no preview appears on the way", not mp["preview"], mp)
+    check("post photos fill the column, all one width", len(mp["widths"]) == 1 and mp["widths"][0] == mp["col"], mp)
     ph.screenshot(path=os.path.join(shots, "v3-phone-post.png"))
 
-    ph.go_back()
-    ph.wait_for_timeout(700)
-    bk = ph.evaluate("() => ({open: document.getElementById('postView').classList.contains('open'), hash: location.hash})")
-    check("Back returns to the grid", not bk["open"], bk)
-    # leaving on a phone: the photo you are on comes back forward over the blurred grid
-    ph.goto(B + "/v3/", wait_until="load")
-    ph.wait_for_timeout(1200)
-    mt = ph.locator('.grid-cell img[data-k="2024-5"][data-n="2"]')
-    mt.scroll_into_view_if_needed(); ph.wait_for_timeout(300); mt.tap(); ph.wait_for_timeout(600)
-    ph.locator("#previewImg").tap(); ph.wait_for_timeout(1400)
+    # leaving flies back down into the thumbnail it came from
     ph.evaluate("() => document.getElementById('postStack').children[9].scrollIntoView({block: 'center'})")
     ph.wait_for_timeout(500)
     ph.go_back()
-    ph.wait_for_timeout(1500)
+    ph.wait_for_timeout(250)
+    check("going back starts the zoom home", ph.evaluate("() => !!document.querySelector('.post-fly')"))
+    ph.wait_for_timeout(1400)
     ml = ph.evaluate("""() => {
-      const d = JSON.parse(document.getElementById('v3data').textContent);
-      const i = document.getElementById('previewImg');
-      const want = d['2024-5'].i[9];
+      const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
+      const b = th.getBoundingClientRect();
+      const bar = document.querySelector('.header-right').getBoundingClientRect().bottom;
       return {open: document.getElementById('postView').classList.contains('open'),
-              visible: document.getElementById('hoverPreview').classList.contains('visible'),
-              match: i.src === new URL(want.s || want.u, location.href).href,
-              scrim: document.getElementById('tapScrim').classList.contains('on'),
-              tagged: !!document.querySelector('.grid-cell img.tapped[data-k="2024-5"][data-n="10"]')}; }""")
+              preview: document.getElementById('hoverPreview').classList.contains('visible'),
+              thumbShown: getComputedStyle(th).visibility === 'visible',
+              onScreen: b.top >= bar - 1 && b.bottom <= innerHeight + 1,
+              leftovers: document.querySelectorAll('.post-fly').length, hash: location.hash}; }""")
     check("phone: Back closes the post", not ml["open"], ml)
-    check("phone: it lands back on image 10, forward over the blurred grid", ml["visible"] and ml["match"] and ml["scrim"], ml)
-    check("phone: that image's own thumbnail is the tapped one", ml["tagged"], ml)
+    check("phone: it lands on that image's own thumbnail", ml["onScreen"] and ml["thumbShown"], ml)
+    check("phone: no preview is left hanging over the grid", not ml["preview"], ml)
+    check("phone: the flying copy is cleaned up", ml["leftovers"] == 0, ml)
     ph.screenshot(path=os.path.join(shots, "v3-phone-landed-back.png"))
-    ph.locator("#previewImg").tap()
-    ph.wait_for_timeout(1300)
-    re = ph.evaluate("() => ({open: document.getElementById('postView').classList.contains('open'), hash: location.hash})")
-    check("phone: tapping it again reopens the week at image 10", re["open"] and re["hash"] == "#2024-w5-i10", re)
-    ph.go_back(); ph.wait_for_timeout(1500)
-    ph.mouse.wheel(0, 400); ph.wait_for_timeout(600)
-    check("phone: scrolling the grid puts the photo back down", not ph.evaluate("""() => document.getElementById('hoverPreview').classList.contains('visible')
-      || document.getElementById('tapScrim').classList.contains('on')"""))
 
+    # the ARCHIVE button does the same
+    ph.locator('.grid-cell img[data-k="2023-30"][data-n="2"]').tap()
+    ph.wait_for_timeout(1300)
+    ph.locator("#postBack").tap()
+    ph.wait_for_timeout(1500)
+    check("phone: the ARCHIVE button also returns to the grid",
+          not ph.evaluate("() => document.getElementById('postView').classList.contains('open')"))
     ph.close()
 
     # ---------------- light / dark follows the device ----------------

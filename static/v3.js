@@ -11,7 +11,6 @@
   var archive = document.getElementById('archive');
   var preview = document.getElementById('hoverPreview');
   var previewImg = document.getElementById('previewImg');
-  var tapScrim = document.getElementById('tapScrim');
   var postView = document.getElementById('postView');
   var postHead = document.getElementById('postHead');
   var postTextEl = document.getElementById('postText');
@@ -115,26 +114,16 @@
   });
 
   // ---------- preview ----------
-  var tapped = null;   // the thumbnail currently brought forward on a touch screen
-
   function showPreview(img) {
     var im = imageOf(img);
     if (!im) return;
     previewImg.src = bigOf(im);
     previewImg.alt = '';
     preview.classList.add('visible');
-    if (!mqHover.matches) {
-      if (tapped && tapped !== img) tapped.classList.remove('tapped');
-      tapped = img;
-      img.classList.add('tapped');
-      tapScrim.classList.add('on');
-    }
   }
   function hidePreview() {
     releaseHold();
     preview.classList.remove('visible');
-    tapScrim.classList.remove('on');
-    if (tapped) { tapped.classList.remove('tapped'); tapped = null; }
   }
 
   function imageOf(img) {
@@ -163,6 +152,18 @@
   var closeTimer = 0;
   var guardTimer = 0;
 
+  // Where a thumbnail's photo really is. On a phone the cell is a square crop (object-fit: cover), so the
+  // photo runs past the cell; flying from that rectangle keeps the zoom even instead of squashing it.
+  // On a desktop the cells are uncropped, so this is just the cell.
+  function thumbPhotoRect(thumb) {
+    var t = thumb.getBoundingClientRect();
+    var im = imageOf(thumb);
+    if (!im || !im.w || !im.h) return { left: t.left, top: t.top, width: t.width, height: t.height };
+    var s = Math.max(t.width / im.w, t.height / im.h);
+    var w = im.w * s, h = im.h * s;
+    return { left: t.left + (t.width - w) / 2, top: t.top + (t.height - h) / 2, width: w, height: h };
+  }
+
   // The preview element fills its whole zone, but the photo inside it is letterboxed (object-fit: contain).
   // This is the rectangle the photo really occupies; the space around it is not part of the photo.
   function previewPictureRect() {
@@ -183,8 +184,7 @@
       var rect = previewPictureRect();
       if (rect) return { rect: rect, src: previewImg.currentSrc || previewImg.src };
     }
-    var t = thumb.getBoundingClientRect();
-    return { rect: { left: t.left, top: t.top, width: t.width, height: t.height }, src: thumb.currentSrc || thumb.src };
+    return { rect: thumbPhotoRect(thumb), src: thumb.currentSrc || thumb.src };
   }
 
   function removeFly() {
@@ -249,16 +249,18 @@
     return { left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, width: w, height: h };
   }
 
-  // Keep that photo's own thumbnail on screen, below the blank zone, so the grid behind matches
-  var ignoreScrollUntil = 0;
+  // Keep that photo's own thumbnail on screen, clear of whatever sits at the top: the blank zone on a
+  // desktop, the sticky year bar on a phone.
   function ensureThumbVisible(thumb) {
     if (!thumb || !thumb.offsetParent) return;
     var r = thumb.getBoundingClientRect();
-    var top = mqWide.matches ? preview.getBoundingClientRect().bottom : 34;
+    var bar = document.querySelector('.header-right');
+    var top = mqWide.matches ? preview.getBoundingClientRect().bottom
+                             : (bar ? bar.getBoundingClientRect().bottom : 0);
     var by = 0;
     if (r.top < top + 12) by = r.top - top - 12;
     else if (r.bottom > window.innerHeight - 12) by = r.bottom - (window.innerHeight - 12);
-    if (by) { ignoreScrollUntil = Date.now() + 900; window.scrollBy(0, by); }
+    if (by) window.scrollBy(0, by);
   }
 
   // After landing, the preview HOLDS that photo: it stays up until the mouse moves onto another thumbnail,
@@ -306,12 +308,17 @@
 
   function layoutPost() {
     if (!currentPost) return;
-    var b = previewImg.getBoundingClientRect();   // the preview box, measured even while hidden
-    // on a narrow desktop window the preview box can be tiny; keep a sensible floor
-    var boxW = Math.max(b.width, Math.min(window.innerWidth - 48, 560));
-    var boxH = b.height;
-    var w = boxH + POST_WIDTH_MIX * (boxW - boxH);
-    w = Math.min(w, COLUMN_MAX, postStack.clientWidth || 9999);
+    var avail = postStack.clientWidth || 9999;
+    var w;
+    if (!mqWide.matches) {
+      w = avail;                                  // on a phone the photo simply fills the column
+    } else {
+      var b = previewImg.getBoundingClientRect();   // the preview box, measured even while hidden
+      // on a narrow desktop window the preview box can be tiny; keep a sensible floor
+      var boxW = Math.max(b.width, Math.min(window.innerWidth - 48, 560));
+      var boxH = b.height;
+      w = Math.min(boxH + POST_WIDTH_MIX * (boxW - boxH), COLUMN_MAX, avail);
+    }
     var imgs = postStack.querySelectorAll('img');
     for (var i = 0; i < imgs.length; i++) {
       var im = currentPost.i[i];
@@ -423,8 +430,10 @@
       var thumb = document.querySelector('.grid-cell img[data-k="' + currentPostKey + '"][data-n="' + (n + 1) + '"]');
       if (imgEl && im) {
         ensureThumbVisible(thumb);
-        var to = previewRectFor(im);
-        if (to) ret = { from: imgEl.getBoundingClientRect(), to: to, src: bigOf(im), imgEl: imgEl, thumb: thumb };   // the same address the post image used, so it is cached and the preview matches it
+        // With a mouse the photo flies back into the preview zone and waits there. On a phone there is no
+        // preview zone, so it flies back down into its own thumbnail, where it came from.
+        var to = mqHover.matches ? previewRectFor(im) : (thumb ? thumbPhotoRect(thumb) : null);
+        if (to) ret = { from: imgEl.getBoundingClientRect(), to: to, src: bigOf(im), imgEl: imgEl, thumb: thumb, toPreview: mqHover.matches };
       }
     }
 
@@ -440,13 +449,15 @@
     if (ret) {
       postView.classList.add('leaving');        // unblur and fade at the pace of the flight
       postScrim.classList.add('leaving');
-      previewImg.src = ret.src;                 // the same file as the post image, so it is already cached
-      if (!mqHover.matches) {                   // on a touch screen it lands as a tapped photo over the blurred grid
-        tapScrim.classList.add('on');
-        if (tapped && tapped !== ret.thumb) tapped.classList.remove('tapped');
-        if (ret.thumb) { tapped = ret.thumb; ret.thumb.classList.add('tapped'); }
+      if (ret.toPreview) {
+        previewImg.src = ret.src;               // the same file as the post image, so it is already cached
+        flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () { landOnGrid(ret); });
+      } else {
+        if (ret.thumb) ret.thumb.style.visibility = 'hidden';   // the copy lands in its place
+        flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () {
+          if (ret.thumb) ret.thumb.style.visibility = '';
+        });
       }
-      flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () { landOnGrid(ret); });
     } else {
       removeFly();
     }
@@ -486,23 +497,8 @@
     if (!img) return;
     e.preventDefault();
     releaseHold();
-    if (mqHover.matches) openFrom(img);
-    else if (tapped === img) openFrom(img);
-    else showPreview(img);
+    openFrom(img);   // one tap opens the week, on a mouse or a finger
   });
-
-  preview.addEventListener('click', function (e) {
-    if (mqHover.matches) return;
-    // The image element is as big as the whole zone, so going by what was tapped would treat the empty
-    // space around a letterboxed photo as the photo. Go by whether the tap is inside the photo itself.
-    var r = previewPictureRect();
-    var onPhoto = !!r && e.clientX >= r.left && e.clientX <= r.left + r.width
-                      && e.clientY >= r.top && e.clientY <= r.top + r.height;
-    if (onPhoto && tapped) openFrom(tapped);   // tapping the photo opens that week
-    else hidePreview();                        // tapping the blurred space around it goes back
-  });
-  tapScrim.addEventListener('click', hidePreview);
-  window.addEventListener('scroll', function () { if (tapped && Date.now() > ignoreScrollUntil) hidePreview(); }, { passive: true });
 
   function leavePost() {
     if (openedFromGrid) history.back();        // drops the #hash entry; hashchange then closes the view
