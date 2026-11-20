@@ -181,13 +181,13 @@
   var openedFromGrid = false;
   var currentPost = null;
 
-  // How big the post images are, as a blend between two sizes:
-  //   0 = exactly the size they have in the preview (no zoom at all), 1 = the full post column / the full screen height.
-  // The width blends toward the column (816px), the height toward the screen height, so a tall portrait grows
-  // somewhat but can never run off the screen. Tweak this one number to taste.
-  var POST_SIZE_MIX = 0.5;
-  var COLUMN_MAX = 816;       // the old post column width
-  var SCREEN_FILL = 0.92;     // the tallest a photo may be, as a share of the screen height
+  // One width for every photo in the post, portraits and landscapes alike, so the column looks even.
+  // It is a middle ground drawn from the preview box: 0 = the preview's height (the width a square photo has
+  // in the preview), 1 = the preview's full width (the width a landscape photo has). 0.2 is the gentlest for this archive (about 41% landscape, 50% portrait or square), keeping
+  // the zoom from the preview gentle for both kinds of photo and keeps most portraits on the screen.
+  // Tweak this one number to taste; COLUMN_MAX caps the width on big screens.
+  var POST_WIDTH_MIX = 0.2;
+  var COLUMN_MAX = 816;   // the old post column width
 
   function layoutPost() {
     if (!currentPost) return;
@@ -195,22 +195,13 @@
     // on a narrow desktop window the preview box can be tiny; keep a sensible floor
     var boxW = Math.max(b.width, Math.min(window.innerWidth - 48, 560));
     var boxH = b.height;
-    var avail = postStack.clientWidth || 9999;
-    var fullW = Math.min(COLUMN_MAX, avail), fullH = window.innerHeight * SCREEN_FILL;
-    var w = Math.min(boxW + POST_SIZE_MIX * Math.max(0, fullW - boxW), avail);
-    var h = boxH + POST_SIZE_MIX * Math.max(0, fullH - boxH);
+    var w = boxH + POST_WIDTH_MIX * (boxW - boxH);
+    w = Math.min(w, COLUMN_MAX, postStack.clientWidth || 9999);
     var imgs = postStack.querySelectorAll('img');
     for (var i = 0; i < imgs.length; i++) {
       var im = currentPost.i[i];
-      if (im && im.w && im.h) {
-        var s = Math.min(w / im.w, h / im.h);   // fit inside w x h, keeping the photo's own proportions
-        imgs[i].style.width = (im.w * s) + 'px';
-        imgs[i].style.height = (im.h * s) + 'px';
-      } else {
-        imgs[i].style.width = w + 'px';
-        imgs[i].style.height = 'auto';
-        imgs[i].style.maxHeight = h + 'px';
-      }
+      imgs[i].style.width = w + 'px';
+      imgs[i].style.height = (im && im.w && im.h) ? (w * im.h / im.w) + 'px' : 'auto';   // keeps the photo's own proportions
     }
   }
   var layoutQueued = false;

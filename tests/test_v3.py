@@ -98,7 +98,7 @@ with sync_playwright() as pw:
     check("page behind is blurred and darkened", po["scrim"])
     pg.screenshot(path=os.path.join(shots, "v3-desktop-post.png"))
 
-    # a tall portrait grows only a little from the preview and never past the screen
+    # every photo gets the same width, a gentle step from the preview; a typical portrait still fits the screen
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(600)
     portrait = pg.locator('.grid-cell img[data-k="2024-9"][data-n="1"]')
@@ -116,14 +116,14 @@ with sync_playwright() as pw:
       const img = r.tagName === 'IMG' ? r : r.querySelector('img');
       const b = img.getBoundingClientRect();
       const all = [...document.querySelectorAll('#postStack img')].map(i => i.getBoundingClientRect());
-      return {w: b.width, h: b.height, maxH: Math.max(...all.map(x => x.height)), maxW: Math.max(...all.map(x => x.width)),
+      return {w: b.width, h: b.height, maxH: Math.max(...all.map(x => x.height)), maxW: Math.max(...all.map(x => x.width)), minW: Math.min(...all.map(x => x.width)),
               ratioOk: Math.abs(b.width / b.height - img.naturalWidth / img.naturalHeight) < 0.01};
     }""")
     check("portrait is tall in the preview (taller than wide)", before["h"] > before["w"], before)
-    check("post image is a little bigger than in the preview (not smaller)", after["w"] >= before["w"] - 1 and after["h"] >= before["h"] - 1, (before, after))
-    check("but a gentle step: under 1.4x the preview size", after["h"] / before["h"] < 1.4 and after["w"] / before["w"] < 1.4, (before, after))
+    check("every post image has the same width (portraits and landscapes alike)", after["maxW"] - after["minW"] < 1, after)
+    check("that width sits between the preview's height and width (a gentle zoom)", before["boxH"] - 1 <= after["w"] <= before["boxW"] + 1, (before, after))
     check("and well short of the old full column (816px wide)", after["w"] < 700, after)
-    check("no post image taller than 92% of the screen", after["maxH"] <= before["vh"] * 0.92 + 1, (after, before))
+    check("a typical 4:5 portrait still fits on the screen", after["h"] <= before["vh"], (after, before))
     check("no post image wider than the 816px column", after["maxW"] <= 817, after)
     check("post image keeps its true proportions", after["ratioOk"], after)
     pg.screenshot(path=os.path.join(shots, "v3-desktop-portrait-post.png"))

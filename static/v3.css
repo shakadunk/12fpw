@@ -248,8 +248,8 @@ body { -webkit-text-size-adjust: 100%; }
 .post-text p + p { margin-top: 1em; }
 .post-text .preface { font-style: italic; }
 .post-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-/* Each image's width and height are set by v3.js layoutPost: a size between the preview's and the full column's,
-   so the zoom is gentle and nothing is ever taller than the screen. */
+/* Every image gets the same width, set by v3.js layoutPost (a middle ground drawn from the preview box), with
+   its height following its own proportions. */
 .post-stack { display: flex; flex-direction: column; align-items: center; gap: 21px; }
 .post-stack img { display: block; max-width: 100%; background: var(--ph); }
 .post-stack a { display: block; }
