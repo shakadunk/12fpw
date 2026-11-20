@@ -181,20 +181,29 @@
   var openedFromGrid = false;
   var currentPost = null;
 
-  // The post images are drawn at exactly the size they have in the preview: the image fitted inside the
-  // preview's picture box, never enlarged past it. So the zoom has nothing to scale, and a tall portrait
-  // can never grow beyond the screen. (The preview box is measured even while the preview is hidden.)
+  // How big the post images are, as a blend between two sizes:
+  //   0 = exactly the size they have in the preview (no zoom at all), 1 = the full post column / the full screen height.
+  // The width blends toward the column (816px), the height toward the screen height, so a tall portrait grows
+  // somewhat but can never run off the screen. Tweak this one number to taste.
+  var POST_SIZE_MIX = 0.5;
+  var COLUMN_MAX = 816;       // the old post column width
+  var SCREEN_FILL = 0.92;     // the tallest a photo may be, as a share of the screen height
+
   function layoutPost() {
     if (!currentPost) return;
-    var b = previewImg.getBoundingClientRect();
+    var b = previewImg.getBoundingClientRect();   // the preview box, measured even while hidden
     // on a narrow desktop window the preview box can be tiny; keep a sensible floor
-    var w = Math.min(Math.max(b.width, Math.min(window.innerWidth - 48, 560)), postStack.clientWidth || 9999);
-    var h = b.height;
+    var boxW = Math.max(b.width, Math.min(window.innerWidth - 48, 560));
+    var boxH = b.height;
+    var avail = postStack.clientWidth || 9999;
+    var fullW = Math.min(COLUMN_MAX, avail), fullH = window.innerHeight * SCREEN_FILL;
+    var w = Math.min(boxW + POST_SIZE_MIX * Math.max(0, fullW - boxW), avail);
+    var h = boxH + POST_SIZE_MIX * Math.max(0, fullH - boxH);
     var imgs = postStack.querySelectorAll('img');
     for (var i = 0; i < imgs.length; i++) {
       var im = currentPost.i[i];
       if (im && im.w && im.h) {
-        var s = Math.min(w / im.w, h / im.h);
+        var s = Math.min(w / im.w, h / im.h);   // fit inside w x h, keeping the photo's own proportions
         imgs[i].style.width = (im.w * s) + 'px';
         imgs[i].style.height = (im.h * s) + 'px';
       } else {

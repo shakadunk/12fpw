@@ -98,7 +98,7 @@ with sync_playwright() as pw:
     check("page behind is blurred and darkened", po["scrim"])
     pg.screenshot(path=os.path.join(shots, "v3-desktop-post.png"))
 
-    # a tall portrait must land at the size it had in the preview: no scaling, never taller than the screen
+    # a tall portrait grows only a little from the preview and never past the screen
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(600)
     portrait = pg.locator('.grid-cell img[data-k="2024-9"][data-n="1"]')
@@ -120,11 +120,11 @@ with sync_playwright() as pw:
               ratioOk: Math.abs(b.width / b.height - img.naturalWidth / img.naturalHeight) < 0.01};
     }""")
     check("portrait is tall in the preview (taller than wide)", before["h"] > before["w"], before)
-    check("post image has the same width as in the preview", abs(after["w"] - before["w"]) < 2, (before, after))
-    check("post image has the same height as in the preview", abs(after["h"] - before["h"]) < 2, (before, after))
-    check("no post image taller than the preview box", after["maxH"] <= before["boxH"] + 1, (after, before))
-    check("no post image wider than the preview box", after["maxW"] <= before["boxW"] + 1, (after, before))
-    check("no post image taller than the screen", after["maxH"] <= before["vh"], (after, before))
+    check("post image is a little bigger than in the preview (not smaller)", after["w"] >= before["w"] - 1 and after["h"] >= before["h"] - 1, (before, after))
+    check("but a gentle step: under 1.4x the preview size", after["h"] / before["h"] < 1.4 and after["w"] / before["w"] < 1.4, (before, after))
+    check("and well short of the old full column (816px wide)", after["w"] < 700, after)
+    check("no post image taller than 92% of the screen", after["maxH"] <= before["vh"] * 0.92 + 1, (after, before))
+    check("no post image wider than the 816px column", after["maxW"] <= 817, after)
     check("post image keeps its true proportions", after["ratioOk"], after)
     pg.screenshot(path=os.path.join(shots, "v3-desktop-portrait-post.png"))
 

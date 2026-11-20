@@ -248,8 +248,8 @@ body { -webkit-text-size-adjust: 100%; }
 .post-text p + p { margin-top: 1em; }
 .post-text .preface { font-style: italic; }
 .post-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-/* Each image is drawn at exactly the size it has in the preview (v3.js layoutPost sets its width and height),
-   so the zoom from the preview to the post is a pure move: no scaling, and nothing taller than the preview. */
+/* Each image's width and height are set by v3.js layoutPost: a size between the preview's and the full column's,
+   so the zoom is gentle and nothing is ever taller than the screen. */
 .post-stack { display: flex; flex-direction: column; align-items: center; gap: 21px; }
 .post-stack img { display: block; max-width: 100%; background: var(--ph); }
 .post-stack a { display: block; }
