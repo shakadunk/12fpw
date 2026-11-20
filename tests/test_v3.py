@@ -296,8 +296,26 @@ with sync_playwright() as pw:
     check("phone preview uses the phone copy", tp["src"] and not tp["src"].endswith("-t.jpg"), tp["src"])
     ph.screenshot(path=os.path.join(shots, "v3-phone-tapped.png"))
 
+    # a tap in the blurred space beside a letterboxed photo goes back, it does not open the week
+    box = ph.evaluate("""() => {
+      const i = document.getElementById('previewImg'), b = i.getBoundingClientRect();
+      const s = Math.min(b.width / i.naturalWidth, b.height / i.naturalHeight);
+      const w = i.naturalWidth * s, h = i.naturalHeight * s;
+      return {elTop: b.top, elLeft: b.left, elW: b.width, elH: b.height,
+              picTop: b.top + (b.height - h) / 2, picLeft: b.left + (b.width - w) / 2, picW: w, picH: h}; }""")
+    gapAbove = box["picTop"] - box["elTop"]
+    check("the photo is letterboxed, so there is empty space inside the image element", gapAbove > 20, box)
+    ph.touchscreen.tap(box["elLeft"] + box["elW"] / 2, box["elTop"] + gapAbove / 2)
+    ph.wait_for_timeout(900)
+    away = ph.evaluate("""() => ({open: document.getElementById('postView').classList.contains('open'),
+      visible: document.getElementById('hoverPreview').classList.contains('visible'),
+      hash: location.hash})""")
+    check("tapping beside the photo does not open the week", not away["open"], away)
+    check("tapping beside the photo puts it back down", not away["visible"], away)
+
     # second tap opens the week at that image
-    ph.locator("#previewImg").tap()
+    t5.tap(); ph.wait_for_timeout(600)
+    ph.touchscreen.tap(box["picLeft"] + box["picW"] / 2, box["picTop"] + box["picH"] / 2)
     ph.wait_for_timeout(1400)
     mp = ph.evaluate("""() => {
       const st = document.getElementById('postStack');

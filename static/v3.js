@@ -163,19 +163,25 @@
   var closeTimer = 0;
   var guardTimer = 0;
 
-  // Where the zoom starts: the picture as drawn in the preview (or the thumbnail itself if there is no preview)
+  // The preview element fills its whole zone, but the photo inside it is letterboxed (object-fit: contain).
+  // This is the rectangle the photo really occupies; the space around it is not part of the photo.
+  function previewPictureRect() {
+    var b = previewImg.getBoundingClientRect();
+    var nw = previewImg.naturalWidth, nh = previewImg.naturalHeight;
+    if (!nw || !nh || !b.width || !b.height) return null;
+    var s = Math.min(b.width / nw, b.height / nh);
+    var w = nw * s, h = nh * s;
+    return { left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, width: w, height: h };
+  }
+
+  // Where the zoom starts: the photo as drawn in the preview (or the thumbnail itself if there is no preview)
   function flyStart(thumb) {
     if (reduceMotion.matches) return null;
     var want = imageOf(thumb);
     var showingThis = !!want && previewImg.getAttribute('src') === bigOf(want);
-    var rect;
-    if (showingThis && preview.classList.contains('visible') && previewImg.naturalWidth) {
-      var b = previewImg.getBoundingClientRect();
-      var nw = previewImg.naturalWidth, nh = previewImg.naturalHeight;
-      var s = Math.min(b.width / nw, b.height / nh);   // object-fit: contain
-      var w = nw * s, h = nh * s;
-      rect = { left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, width: w, height: h };
-      return { rect: rect, src: previewImg.currentSrc || previewImg.src };
+    if (showingThis && preview.classList.contains('visible')) {
+      var rect = previewPictureRect();
+      if (rect) return { rect: rect, src: previewImg.currentSrc || previewImg.src };
     }
     var t = thumb.getBoundingClientRect();
     return { rect: { left: t.left, top: t.top, width: t.width, height: t.height }, src: thumb.currentSrc || thumb.src };
@@ -487,8 +493,13 @@
 
   preview.addEventListener('click', function (e) {
     if (mqHover.matches) return;
-    if (e.target === previewImg && tapped) openFrom(tapped);
-    else hidePreview();
+    // The image element is as big as the whole zone, so going by what was tapped would treat the empty
+    // space around a letterboxed photo as the photo. Go by whether the tap is inside the photo itself.
+    var r = previewPictureRect();
+    var onPhoto = !!r && e.clientX >= r.left && e.clientX <= r.left + r.width
+                      && e.clientY >= r.top && e.clientY <= r.top + r.height;
+    if (onPhoto && tapped) openFrom(tapped);   // tapping the photo opens that week
+    else hidePreview();                        // tapping the blurred space around it goes back
   });
   tapScrim.addEventListener('click', hidePreview);
   window.addEventListener('scroll', function () { if (tapped && Date.now() > ignoreScrollUntil) hidePreview(); }, { passive: true });
