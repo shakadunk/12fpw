@@ -149,7 +149,8 @@ body {
   height: var(--overlay-h);
   background: var(--bg);
   z-index: 99;
-  pointer-events: none;
+  /* It takes the mouse on purpose. The grid scrolls up behind this panel, so letting the mouse through
+     would hover thumbnails hidden underneath and show photos you cannot see. */
 }
 
 /* === GRID ARCHIVE === */

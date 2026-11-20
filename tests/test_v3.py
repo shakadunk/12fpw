@@ -44,6 +44,10 @@ with sync_playwright() as pw:
     check("one section per year, newest first", g["sections"] == [str(y) for y in years], g["sections"])
     check("every week has 12 images", set(g["perRow"]) == {12}, set(g["perRow"]))
     check("blank top zone present", g["topOverlayShown"])
+    hidden = pg.evaluate("""() => {
+      const el = document.elementFromPoint(innerWidth / 2, 120);
+      return !(el && el.closest && el.closest('.grid-cell')); }""")
+    check("the blank zone does not pass the mouse to thumbnails hidden behind it", hidden)
     visible = g["vh"] - g["overlay"]
     check("grid zone is about 1.5 rows", 1.2 * g["row0H"] <= visible <= 1.9 * g["row0H"], (visible, g["row0H"]))
     check("grid zone at most 45% of the screen", visible <= g["vh"] * 0.45 + 2, (visible, g["vh"]))
@@ -226,12 +230,24 @@ with sync_playwright() as pw:
               visible: document.getElementById('hoverPreview').classList.contains('visible'),
               match: i.src === new URL(d['2023-40'].i[6].u, location.href).href}; }""")
     check("browser Back also zooms out and lands on image 7", not b2["open"] and b2["visible"] and b2["match"], b2)
+    pg.mouse.move(720, 180); pg.wait_for_timeout(350)
+    pg.mouse.move(690, 300); pg.wait_for_timeout(350)
+    held = pg.evaluate("""() => {
+      const d = JSON.parse(document.getElementById('v3data').textContent);
+      const i = document.getElementById('previewImg');
+      return {visible: document.getElementById('hoverPreview').classList.contains('visible'),
+              match: i.src === new URL(d['2023-40'].i[6].u, location.href).href}; }""")
+    check("moving the mouse without hovering a thumbnail leaves it up", held["visible"] and held["match"], held)
+
     other = pg.locator('.grid-cell img[data-k="2023-40"][data-n="1"]')
     other.hover(); pg.wait_for_timeout(500)
     sw = pg.evaluate("""() => {
       const d = JSON.parse(document.getElementById('v3data').textContent);
       return document.getElementById('previewImg').src === new URL(d['2023-40'].i[0].u, location.href).href; }""")
     check("hovering another thumbnail takes the preview back over", sw)
+    pg.mouse.move(690, 300); pg.wait_for_timeout(400)
+    check("after that, leaving a thumbnail hides the preview as usual",
+          not pg.evaluate("() => document.getElementById('hoverPreview').classList.contains('visible')"))
 
     pg.close()
 

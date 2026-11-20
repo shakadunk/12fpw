@@ -103,7 +103,7 @@
     }
   }
   function hidePreview() {
-    previewPinned = false;
+    releaseHold();
     preview.classList.remove('visible');
     tapScrim.classList.remove('on');
     if (tapped) { tapped.classList.remove('tapped'); tapped = null; }
@@ -115,12 +115,17 @@
   }
 
   archive.addEventListener('mouseover', function (e) {
-    if (!mqHover.matches || previewPinned) return;
+    if (!mqHover.matches) return;
     var img = e.target.closest('.grid-cell img');
-    if (img) showPreview(img);
+    if (!img) return;
+    if (previewHeld) {
+      if (!hoverIsReal(e)) return;   // the stray hover fired when the post disappeared
+      releaseHold();                 // a real move onto a thumbnail takes the preview back
+    }
+    showPreview(img);
   });
   archive.addEventListener('mouseout', function (e) {
-    if (!mqHover.matches || previewPinned) return;
+    if (!mqHover.matches || previewHeld) return;   // while held, the photo stays up
     if (e.target.closest('.grid-cell img')) preview.classList.remove('visible');
   });
 
@@ -222,16 +227,23 @@
     if (by) { ignoreScrollUntil = Date.now() + 900; window.scrollBy(0, by); }
   }
 
-  // After landing, the preview holds that photo until the mouse actually moves. The browser fires a stray
-  // hover the moment the post disappears, so hand control back on real movement, not on that.
-  var previewPinned = false;
-  function unpinPreview() { previewPinned = false; }
-  function onMoveAfterLanding(e) {
-    previewPinned = false;
-    if (!mqHover.matches) return;
-    var el = document.elementFromPoint(e.clientX, e.clientY);
-    var img = el && el.closest ? el.closest('.grid-cell img') : null;
-    if (img) showPreview(img);   // the mouse is already on another thumbnail: follow it
+  // After landing, the preview HOLDS that photo: it stays up until the mouse moves onto another thumbnail,
+  // so it never just vanishes. The browser fires a stray hover the moment the post disappears, at the spot
+  // the cursor was already sitting on; a hover counts as real when it arrives somewhere else, or after the
+  // mouse has actually moved. Going by the position rather than the order of events also catches a single
+  // quick flick straight onto another thumbnail.
+  var previewHeld = false, movedSinceLanding = false;
+  var lastX = null, lastY = null, holdX = null, holdY = null;
+  document.addEventListener('mousemove', function (e) {
+    lastX = e.clientX; lastY = e.clientY;
+    if (previewHeld) movedSinceLanding = true;
+  }, { passive: true });
+
+  function holdPreview() { previewHeld = true; movedSinceLanding = false; holdX = lastX; holdY = lastY; }
+  function releaseHold() { previewHeld = false; movedSinceLanding = false; }
+  function hoverIsReal(e) {
+    if (movedSinceLanding || holdX === null) return true;
+    return Math.abs(e.clientX - holdX) > 2 || Math.abs(e.clientY - holdY) > 2;
   }
 
   function landOnGrid(ret) {
@@ -241,8 +253,7 @@
     preview.classList.add('visible');
     void preview.offsetHeight;
     preview.style.transition = t;
-    previewPinned = true;
-    document.addEventListener('mousemove', onMoveAfterLanding, { once: true });
+    holdPreview();
   }
 
   // ---------- post view ----------
@@ -440,7 +451,7 @@
     var img = e.target.closest('.grid-cell img');
     if (!img) return;
     e.preventDefault();
-    unpinPreview();
+    releaseHold();
     if (mqHover.matches) openFrom(img);
     else if (tapped === img) openFrom(img);
     else showPreview(img);
