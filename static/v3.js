@@ -183,10 +183,10 @@
 
   // One width for every photo in the post, portraits and landscapes alike, so the column looks even.
   // It is a middle ground drawn from the preview box: 0 = the preview's height (the width a square photo has
-  // in the preview), 1 = the preview's full width (the width a landscape photo has). 0.2 is the gentlest for this archive (about 41% landscape, 50% portrait or square), keeping
+  // in the preview), 1 = the preview's full width (the width a landscape photo has). 0.2 was the gentlest for this archive (about 41% landscape, 50% portrait or square); 0.4 is a bit wider, keeping
   // the zoom from the preview gentle for both kinds of photo and keeps most portraits on the screen.
   // Tweak this one number to taste; COLUMN_MAX caps the width on big screens.
-  var POST_WIDTH_MIX = 0.2;
+  var POST_WIDTH_MIX = 0.4;
   var COLUMN_MAX = 816;   // the old post column width
 
   function layoutPost() {
