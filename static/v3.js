@@ -103,6 +103,7 @@
     }
   }
   function hidePreview() {
+    previewPinned = false;
     preview.classList.remove('visible');
     tapScrim.classList.remove('on');
     if (tapped) { tapped.classList.remove('tapped'); tapped = null; }
@@ -114,12 +115,12 @@
   }
 
   archive.addEventListener('mouseover', function (e) {
-    if (!mqHover.matches) return;
+    if (!mqHover.matches || previewPinned) return;
     var img = e.target.closest('.grid-cell img');
     if (img) showPreview(img);
   });
   archive.addEventListener('mouseout', function (e) {
-    if (!mqHover.matches) return;
+    if (!mqHover.matches || previewPinned) return;
     if (e.target.closest('.grid-cell img')) preview.classList.remove('visible');
   });
 
@@ -132,8 +133,10 @@
   // Where the zoom starts: the picture as drawn in the preview (or the thumbnail itself if there is no preview)
   function flyStart(thumb) {
     if (reduceMotion.matches) return null;
+    var want = imageOf(thumb);
+    var showingThis = !!want && previewImg.getAttribute('src') === bigOf(want);
     var rect;
-    if (preview.classList.contains('visible') && previewImg.naturalWidth) {
+    if (showingThis && preview.classList.contains('visible') && previewImg.naturalWidth) {
       var b = previewImg.getBoundingClientRect();
       var nw = previewImg.naturalWidth, nh = previewImg.naturalHeight;
       var s = Math.min(b.width / nw, b.height / nh);   // object-fit: contain
@@ -152,34 +155,101 @@
     activeFly = null;
   }
 
-  function flyIn(fly, target) {
+  // One flight, used both ways: a copy of the photo starts at fromRect and lands on toRect.
+  function flyBetween(fromRect, toRect, src, hideEl, done) {
     removeFly();
-    var end = target.getBoundingClientRect();
-    if (!end.width || !end.height) return;
+    if (!toRect || !toRect.width || !toRect.height || !fromRect.width || !fromRect.height) { if (done) done(); return; }
     var el = document.createElement('img');
     el.className = 'post-fly';
-    el.src = fly.src;
+    el.src = src;
     el.alt = '';
-    el.style.left = end.left + 'px';
-    el.style.top = end.top + 'px';
-    el.style.width = end.width + 'px';
-    el.style.height = end.height + 'px';
-    el.style.transform = 'translate(' + (fly.rect.left - end.left) + 'px, ' + (fly.rect.top - end.top) + 'px) scale(' + (fly.rect.width / end.width) + ', ' + (fly.rect.height / end.height) + ')';
+    el.style.left = toRect.left + 'px';
+    el.style.top = toRect.top + 'px';
+    el.style.width = toRect.width + 'px';
+    el.style.height = toRect.height + 'px';
+    el.style.transform = 'translate(' + (fromRect.left - toRect.left) + 'px, ' + (fromRect.top - toRect.top) + 'px) scale(' + (fromRect.width / toRect.width) + ', ' + (fromRect.height / toRect.height) + ')';
     document.body.appendChild(el);
-    target.style.visibility = 'hidden';   // the real image is revealed when the copy lands
-    activeFly = { el: el, target: target };
-    el.getBoundingClientRect();           // flush, so the transition starts from the preview position
+    if (hideEl) hideEl.style.visibility = 'hidden';   // the real image appears when the copy lands
+    activeFly = { el: el, target: hideEl };
+    el.getBoundingClientRect();           // flush, so the transition starts from the other end
     el.style.transition = 'transform .55s var(--ease-open)';
     el.style.transform = 'none';
-    var done = function () { if (activeFly && activeFly.el === el) removeFly(); };
-    el.addEventListener('transitionend', done, { once: true });
-    setTimeout(done, 800);
+    var fin = function () {
+      if (!activeFly || activeFly.el !== el) return;
+      if (done) done();
+      removeFly();
+    };
+    el.addEventListener('transitionend', fin, { once: true });
+    setTimeout(fin, 800);
+  }
+
+  // Opening: from the preview (or the thumbnail) onto the photo in the post.
+  function flyIn(fly, target) {
+    flyBetween(fly.rect, target.getBoundingClientRect(), fly.src, target);
+  }
+
+  // Leaving: the photo you are on flies back into the preview zone and stays there.
+  // Which photo that is: the one whose centre is nearest the centre of the screen.
+  function currentPostIndex() {
+    var kids = postStack.children, mid = window.innerHeight / 2, best = 0, bestD = Infinity;
+    for (var i = 0; i < kids.length; i++) {
+      var r = kids[i].getBoundingClientRect();
+      var d = Math.abs(r.top + r.height / 2 - mid);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  // Where a photo is drawn inside the preview zone. The preview's own box is a fixed share of that zone,
+  // so it can be measured even while the preview is hidden; the photo is fitted inside it (object-fit: contain).
+  function previewRectFor(im) {
+    var b = previewImg.getBoundingClientRect();
+    if (!b.width || !b.height || !im || !im.w || !im.h) return null;
+    var s = Math.min(b.width / im.w, b.height / im.h);
+    var w = im.w * s, h = im.h * s;
+    return { left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, width: w, height: h };
+  }
+
+  // Keep that photo's own thumbnail on screen, below the blank zone, so the grid behind matches
+  var ignoreScrollUntil = 0;
+  function ensureThumbVisible(thumb) {
+    if (!thumb || !thumb.offsetParent) return;
+    var r = thumb.getBoundingClientRect();
+    var top = mqWide.matches ? preview.getBoundingClientRect().bottom : 34;
+    var by = 0;
+    if (r.top < top + 12) by = r.top - top - 12;
+    else if (r.bottom > window.innerHeight - 12) by = r.bottom - (window.innerHeight - 12);
+    if (by) { ignoreScrollUntil = Date.now() + 900; window.scrollBy(0, by); }
+  }
+
+  // After landing, the preview holds that photo until the mouse actually moves. The browser fires a stray
+  // hover the moment the post disappears, so hand control back on real movement, not on that.
+  var previewPinned = false;
+  function unpinPreview() { previewPinned = false; }
+  function onMoveAfterLanding(e) {
+    previewPinned = false;
+    if (!mqHover.matches) return;
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    var img = el && el.closest ? el.closest('.grid-cell img') : null;
+    if (img) showPreview(img);   // the mouse is already on another thumbnail: follow it
+  }
+
+  function landOnGrid(ret) {
+    var t = preview.style.transition;
+    preview.style.transition = 'none';          // swap in with no fade, exactly where the flight ended
+    previewImg.src = ret.src;
+    preview.classList.add('visible');
+    void preview.offsetHeight;
+    preview.style.transition = t;
+    previewPinned = true;
+    document.addEventListener('mousemove', onMoveAfterLanding, { once: true });
   }
 
   // ---------- post view ----------
   var currentKey = '';
   var openedFromGrid = false;
   var currentPost = null;
+  var currentPostKey = '';
 
   // One width for every photo in the post, portraits and landscapes alike, so the column looks even.
   // It is a middle ground drawn from the preview box: 0 = the preview's height (the width a square photo has
@@ -248,6 +318,8 @@
 
     var animate = !!fly && !reduceMotion.matches;
     clearTimeout(closeTimer);
+    postView.classList.remove('leaving');
+    postScrim.classList.remove('leaving');
     postView.classList.toggle('instant', !animate);
     if (animate) preview.style.transition = 'none';   // the flying copy takes over from the preview, so hide that at once
     hidePreview();
@@ -256,6 +328,7 @@
     postView.setAttribute('aria-hidden', 'false');
     postView.scrollTop = 0;
     currentPost = post;
+    currentPostKey = key;
     layoutPost();   // sizes every image like the preview, so the space is reserved before anything decodes
 
     // Scroll so the chosen image's centre lands on the window's centre
@@ -287,22 +360,60 @@
   }
 
   function closePostView() {
-    removeFly();
+    if (!postView.classList.contains('open')) {
+      removeFly();
+      currentKey = ''; openedFromGrid = false; currentPost = null; currentPostKey = '';
+      return;
+    }
+
+    // Work out the flight home before anything is torn down: the photo you are on, where it is now,
+    // and where it belongs in the preview zone.
+    var ret = null;
+    if (currentPost && !reduceMotion.matches) {
+      var n = currentPostIndex();
+      var im = currentPost.i[n];
+      var node = postStack.children[n];
+      var imgEl = node && (node.tagName === 'IMG' ? node : node.querySelector('img'));
+      var thumb = document.querySelector('.grid-cell img[data-k="' + currentPostKey + '"][data-n="' + (n + 1) + '"]');
+      if (imgEl && im) {
+        ensureThumbVisible(thumb);
+        var to = previewRectFor(im);
+        if (to) ret = { from: imgEl.getBoundingClientRect(), to: to, src: bigOf(im), imgEl: imgEl, thumb: thumb };   // the same address the post image used, so it is cached and the preview matches it
+      }
+    }
+
     currentKey = '';
     openedFromGrid = false;
     currentPost = null;
-    if (!postView.classList.contains('open')) return;
+    currentPostKey = '';
+
     postView.classList.remove('shown', 'instant');
     postScrim.classList.remove('fx');
     postView.setAttribute('aria-hidden', 'true');
+
+    if (ret) {
+      postView.classList.add('leaving');        // unblur and fade at the pace of the flight
+      postScrim.classList.add('leaving');
+      previewImg.src = ret.src;                 // the same file as the post image, so it is already cached
+      if (!mqHover.matches) {                   // on a touch screen it lands as a tapped photo over the blurred grid
+        tapScrim.classList.add('on');
+        if (tapped && tapped !== ret.thumb) tapped.classList.remove('tapped');
+        if (ret.thumb) { tapped = ret.thumb; ret.thumb.classList.add('tapped'); }
+      }
+      flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () { landOnGrid(ret); });
+    } else {
+      removeFly();
+    }
+
     clearTimeout(closeTimer);
     closeTimer = setTimeout(function () {
       if (!postView.classList.contains('shown')) {
-        postView.classList.remove('open');
+        postView.classList.remove('open', 'leaving');
+        postScrim.classList.remove('leaving');
         postStack.textContent = '';
         postTextEl.innerHTML = '';
       }
-    }, 260);
+    }, ret ? 650 : 260);
   }
 
   // The address hash (#2024-w5-i5) drives the view, so the Back button and direct links both work
@@ -328,6 +439,7 @@
     var img = e.target.closest('.grid-cell img');
     if (!img) return;
     e.preventDefault();
+    unpinPreview();
     if (mqHover.matches) openFrom(img);
     else if (tapped === img) openFrom(img);
     else showPreview(img);
@@ -339,7 +451,7 @@
     else hidePreview();
   });
   tapScrim.addEventListener('click', hidePreview);
-  window.addEventListener('scroll', function () { if (tapped) hidePreview(); }, { passive: true });
+  window.addEventListener('scroll', function () { if (tapped && Date.now() > ignoreScrollUntil) hidePreview(); }, { passive: true });
 
   function leavePost() {
     if (openedFromGrid) history.back();   // drops the #hash entry; hashchange then closes the view

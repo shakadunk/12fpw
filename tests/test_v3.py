@@ -49,6 +49,7 @@ with sync_playwright() as pw:
     check("grid zone at most 45% of the screen", visible <= g["vh"] * 0.45 + 2, (visible, g["vh"]))
     check("year label pinned below the blank zone", g["yearTop"] >= g["overlay"] - 1, (g["yearTop"], g["overlay"]))
     check("no sideways scrolling at 1440", not g["overflow"])
+    check("the window is the scroller, not <body>", pg.evaluate("() => document.documentElement.scrollHeight - innerHeight > 100"))
     pg.screenshot(path=os.path.join(shots, "v3-desktop-landing.png"))
 
     # hover shows the full-size copy, not the 700px thumbnail
@@ -100,7 +101,7 @@ with sync_playwright() as pw:
 
     # every photo gets the same width, a gentle step from the preview; a typical portrait still fits the screen
     pg.keyboard.press("Escape")
-    pg.wait_for_timeout(600)
+    pg.wait_for_timeout(1000)   # closing is animated now
     portrait = pg.locator('.grid-cell img[data-k="2024-9"][data-n="1"]')
     portrait.hover()
     pg.wait_for_timeout(500)
@@ -133,7 +134,7 @@ with sync_playwright() as pw:
     check("link guard has lifted by now (600ms)", not guard)
 
     pg.keyboard.press("Escape")
-    pg.wait_for_timeout(600)
+    pg.wait_for_timeout(1000)   # closing is animated now
     cl = pg.evaluate("() => ({open: document.getElementById('postView').classList.contains('open'), hash: location.hash})")
     check("Esc closes the post", not cl["open"], cl)
 
@@ -155,6 +156,66 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(900)
     nl = pg.evaluate("() => [...document.getElementById('postStack').children].filter(c => c.tagName === 'A').length")
     check("all-original week has no image links", nl == 0, nl)
+    # leaving a post: the photo you are on flies back into the preview zone and stays there
+    pg.goto(B + "/v3/", wait_until="load")
+    pg.wait_for_timeout(1200)
+    t2 = pg.locator('.grid-cell img[data-k="2024-5"][data-n="2"]')
+    t2.hover(); pg.wait_for_timeout(400); t2.click(); pg.wait_for_timeout(1300)
+    pg.evaluate("() => document.getElementById('postStack').children[9].scrollIntoView({block: 'center'})")
+    pg.wait_for_timeout(500)
+    on = pg.evaluate("""() => {
+      const st = document.getElementById('postStack'), mid = innerHeight / 2;
+      let best = 0, bd = 1e9;
+      [...st.children].forEach((c, i) => { const r = c.getBoundingClientRect(); const d = Math.abs(r.top + r.height / 2 - mid); if (d < bd) { bd = d; best = i; } });
+      return best + 1; }""")
+    check("scrolled down to image 10 inside the post", on == 10, on)
+    pg.click("#postBack")
+    pg.wait_for_timeout(300)
+    mid = pg.evaluate("""() => ({fly: !!document.querySelector('.post-fly'),
+      leaving: document.getElementById('postView').classList.contains('leaving'),
+      scrim: document.getElementById('postScrim').classList.contains('fx')})""")
+    check("ARCHIVE starts the zoom back", mid["fly"] and mid["leaving"], mid)
+    check("the page comes back into focus on the way out", not mid["scrim"])
+    pg.wait_for_timeout(1300)
+    land = pg.evaluate("""() => {
+      const d = JSON.parse(document.getElementById('v3data').textContent);
+      const i = document.getElementById('previewImg');
+      return {open: document.getElementById('postView').classList.contains('open'),
+              visible: document.getElementById('hoverPreview').classList.contains('visible'),
+              match: i.src === new URL(d['2024-5'].i[9].u, location.href).href, src: i.getAttribute('src'),
+              fly: !!document.querySelector('.post-fly'), hash: location.hash}; }""")
+    check("the post is closed afterwards", not land["open"], land)
+    check("it lands back on image 10, enlarged in the preview zone", land["visible"] and land["match"], land)
+    check("the flying copy is cleaned up", not land["fly"])
+    seat = pg.evaluate("""() => {
+      const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
+      const b = th.getBoundingClientRect(), ov = document.getElementById('hoverPreview').getBoundingClientRect().bottom;
+      return {ok: b.top >= ov - 1 && b.bottom <= innerHeight + 1, top: Math.round(b.top), ov: Math.round(ov)}; }""")
+    check("that image's own thumbnail is on screen below the blank zone", seat["ok"], seat)
+    check("the address is back at the archive", land["hash"] in ("", "#"), land["hash"])
+    pg.screenshot(path=os.path.join(shots, "v3-desktop-landed-back.png"))
+
+    # the browser Back button does the same, and hovering another thumbnail takes over again
+    t4 = pg.locator('.grid-cell img[data-k="2023-40"][data-n="4"]')
+    t4.scroll_into_view_if_needed(); t4.hover(); pg.wait_for_timeout(400); t4.click(); pg.wait_for_timeout(1300)
+    pg.evaluate("() => document.getElementById('postStack').children[6].scrollIntoView({block: 'center'})")
+    pg.wait_for_timeout(500)
+    pg.go_back()
+    pg.wait_for_timeout(1400)
+    b2 = pg.evaluate("""() => {
+      const d = JSON.parse(document.getElementById('v3data').textContent);
+      const i = document.getElementById('previewImg');
+      return {open: document.getElementById('postView').classList.contains('open'),
+              visible: document.getElementById('hoverPreview').classList.contains('visible'),
+              match: i.src === new URL(d['2023-40'].i[6].u, location.href).href}; }""")
+    check("browser Back also zooms out and lands on image 7", not b2["open"] and b2["visible"] and b2["match"], b2)
+    other = pg.locator('.grid-cell img[data-k="2023-40"][data-n="1"]')
+    other.hover(); pg.wait_for_timeout(500)
+    sw = pg.evaluate("""() => {
+      const d = JSON.parse(document.getElementById('v3data').textContent);
+      return document.getElementById('previewImg').src === new URL(d['2023-40'].i[0].u, location.href).href; }""")
+    check("hovering another thumbnail takes the preview back over", sw)
+
     pg.close()
 
     # ---------------- phone ----------------
@@ -222,6 +283,38 @@ with sync_playwright() as pw:
     ph.wait_for_timeout(700)
     bk = ph.evaluate("() => ({open: document.getElementById('postView').classList.contains('open'), hash: location.hash})")
     check("Back returns to the grid", not bk["open"], bk)
+    # leaving on a phone: the photo you are on comes back forward over the blurred grid
+    ph.goto(B + "/v3/", wait_until="load")
+    ph.wait_for_timeout(1200)
+    mt = ph.locator('.grid-cell img[data-k="2024-5"][data-n="2"]')
+    mt.scroll_into_view_if_needed(); ph.wait_for_timeout(300); mt.tap(); ph.wait_for_timeout(600)
+    ph.locator("#previewImg").tap(); ph.wait_for_timeout(1400)
+    ph.evaluate("() => document.getElementById('postStack').children[9].scrollIntoView({block: 'center'})")
+    ph.wait_for_timeout(500)
+    ph.go_back()
+    ph.wait_for_timeout(1500)
+    ml = ph.evaluate("""() => {
+      const d = JSON.parse(document.getElementById('v3data').textContent);
+      const i = document.getElementById('previewImg');
+      const want = d['2024-5'].i[9];
+      return {open: document.getElementById('postView').classList.contains('open'),
+              visible: document.getElementById('hoverPreview').classList.contains('visible'),
+              match: i.src === new URL(want.s || want.u, location.href).href,
+              scrim: document.getElementById('tapScrim').classList.contains('on'),
+              tagged: !!document.querySelector('.grid-cell img.tapped[data-k="2024-5"][data-n="10"]')}; }""")
+    check("phone: Back closes the post", not ml["open"], ml)
+    check("phone: it lands back on image 10, forward over the blurred grid", ml["visible"] and ml["match"] and ml["scrim"], ml)
+    check("phone: that image's own thumbnail is the tapped one", ml["tagged"], ml)
+    ph.screenshot(path=os.path.join(shots, "v3-phone-landed-back.png"))
+    ph.locator("#previewImg").tap()
+    ph.wait_for_timeout(1300)
+    re = ph.evaluate("() => ({open: document.getElementById('postView').classList.contains('open'), hash: location.hash})")
+    check("phone: tapping it again reopens the week at image 10", re["open"] and re["hash"] == "#2024-w5-i10", re)
+    ph.go_back(); ph.wait_for_timeout(1500)
+    ph.mouse.wheel(0, 400); ph.wait_for_timeout(600)
+    check("phone: scrolling the grid puts the photo back down", not ph.evaluate("""() => document.getElementById('hoverPreview').classList.contains('visible')
+      || document.getElementById('tapScrim').classList.contains('on')"""))
+
     ph.close()
     br.close()
 

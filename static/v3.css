@@ -20,14 +20,20 @@
   color-scheme: light;
 }
 
-html, body {
+/* overflow-x on the root propagates to the viewport, so the window stays the scroller. Putting height
+   and overflow-x on <body> instead would make <body> its own scroll container, and then scrolling the
+   page from a script, and the scroll that dismisses a tapped photo, both silently do nothing. */
+html {
   height: 100%;
+  overflow-x: hidden;
+}
+body {
+  min-height: 100%;
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
-body { -webkit-text-size-adjust: 100%; }
 
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -217,6 +223,9 @@ body { -webkit-text-size-adjust: 100%; }
 .post-view.open { display: block; }
 .post-view.shown { opacity: 1; transition: opacity .3s var(--ease-open) .25s; }
 .post-view.instant, .post-view.instant.shown { transition: none; }
+/* Leaving with the zoom: the post fades and the page comes back into focus while the photo flies home */
+.post-view.leaving { pointer-events: none; transition: opacity .3s var(--ease-open); }
+.post-scrim.leaving { transition: opacity .45s var(--ease-open), backdrop-filter .45s var(--ease-open), -webkit-backdrop-filter .45s var(--ease-open); }
 .post-view:focus { outline: none; }
 
 .post-back {
