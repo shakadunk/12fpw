@@ -400,34 +400,35 @@
   window.addEventListener('scroll', onScrollRemember, { passive: true });
   postView.addEventListener('scroll', onScrollRemember, { passive: true });
 
-  var restoreQueued = false;
+  // Debounce: trackpad Smart Zoom and pinch-zoom fire dozens of resize events
+  // during a smooth ~300ms animation.  Restoring on every frame fights the
+  // gesture and makes the page jump.  Instead, wait until the resize stream
+  // goes quiet (150ms with no new event) and then restore once.
+  var restoreTimer = null;
+  function restorePlace() {
+    restoreTimer = null;
+    if (anchorPost && postView.classList.contains('open')) {
+      var node = postStack.children[anchorPost.i];
+      if (node) {
+        var r = node.getBoundingClientRect();
+        var cy = postView.getBoundingClientRect().top + postView.clientHeight / 2;
+        postView.scrollTop += (r.top + anchorPost.f * r.height) - cy;
+      }
+    }
+    if (anchorGrid && !activeFly) {
+      var row = document.querySelectorAll('.week-row')[anchorGrid.i];
+      if (row) {
+        var rr = row.getBoundingClientRect();
+        window.scrollBy(0, (rr.top + anchorGrid.f * rr.height) - gridProbeY());
+      }
+    }
+    resizing = false;
+    rememberPlace();
+  }
   window.addEventListener('resize', function () {
     resizing = true;
-    if (restoreQueued) return;
-    restoreQueued = true;
-    // runs after the overlay and the post have been re-laid out (those listeners registered first)
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        restoreQueued = false;
-        if (anchorPost && postView.classList.contains('open')) {
-          var node = postStack.children[anchorPost.i];
-          if (node) {
-            var r = node.getBoundingClientRect();
-            var cy = postView.getBoundingClientRect().top + postView.clientHeight / 2;
-            postView.scrollTop += (r.top + anchorPost.f * r.height) - cy;
-          }
-        }
-        if (anchorGrid && !activeFly) {
-          var row = document.querySelectorAll('.week-row')[anchorGrid.i];
-          if (row) {
-            var rr = row.getBoundingClientRect();
-            window.scrollBy(0, (rr.top + anchorGrid.f * rr.height) - gridProbeY());
-          }
-        }
-        resizing = false;
-        rememberPlace();
-      });
-    });
+    if (restoreTimer) clearTimeout(restoreTimer);
+    restoreTimer = setTimeout(restorePlace, 150);
   });
   // a held preview belongs to the zone; if the window stops having one, put it away
   mqWide.addEventListener && mqWide.addEventListener('change', function () { if (!hasZone()) { hidePreview(); } });
