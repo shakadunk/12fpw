@@ -8,6 +8,11 @@
   try { data = JSON.parse(document.getElementById('v3data').textContent); } catch (e) { return; }
 
   var html = document.documentElement;
+
+  // Going back makes the browser restore the scroll position it recorded for that history entry, and on a
+  // phone it can do that AFTER this code has already placed the grid for the flight home — so the grid ends
+  // up somewhere else and the photo lands away from its thumbnail. The page positions itself, so take it over.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   var archive = document.getElementById('archive');
   var preview = document.getElementById('hoverPreview');
   var previewImg = document.getElementById('previewImg');
@@ -195,15 +200,19 @@
   }
 
   // One flight, used both ways: a copy of the photo starts at fromRect and lands on toRect.
-  function flyBetween(fromRect, toRect, src, hideEl, done) {
+  // Both rectangles are measured against the window. `onPage` pins the copy to the document instead, which
+  // is what the flight home needs: it ends on a thumbnail in the grid, so if anything scrolls the page
+  // mid-flight the copy has to move with the grid rather than stay put on the screen.
+  function flyBetween(fromRect, toRect, src, hideEl, done, onPage) {
     removeFly();
     if (!toRect || !toRect.width || !toRect.height || !fromRect.width || !fromRect.height) { if (done) done(); return; }
+    var dx = onPage ? window.pageXOffset : 0, dy = onPage ? window.pageYOffset : 0;
     var el = document.createElement('img');
-    el.className = 'post-fly';
+    el.className = onPage ? 'post-fly on-page' : 'post-fly';
     el.src = src;
     el.alt = '';
-    el.style.left = toRect.left + 'px';
-    el.style.top = toRect.top + 'px';
+    el.style.left = (toRect.left + dx) + 'px';
+    el.style.top = (toRect.top + dy) + 'px';
     el.style.width = toRect.width + 'px';
     el.style.height = toRect.height + 'px';
     el.style.transform = 'translate(' + (fromRect.left - toRect.left) + 'px, ' + (fromRect.top - toRect.top) + 'px) scale(' + (fromRect.width / toRect.width) + ', ' + (fromRect.height / toRect.height) + ')';
@@ -465,7 +474,7 @@
         if (ret.thumb) ret.thumb.style.visibility = 'hidden';   // the copy lands in its place
         flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () {
           if (ret.thumb) ret.thumb.style.visibility = '';
-        });
+        }, true);   // pinned to the page, so it stays on its thumbnail whatever the scroll does
       }
     } else {
       removeFly();

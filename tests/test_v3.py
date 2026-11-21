@@ -278,6 +278,8 @@ with sync_playwright() as pw:
     check("each week's label carries its week and year", m["label"] == "9 2024", m["label"])
     check("so the sticky year label is not needed", m["yearHeader"] == "none", m["yearHeader"])
     check("no sideways scrolling at 390", not m["overflow"])
+    check("the page places itself rather than letting the browser restore scroll",
+          ph.evaluate("() => history.scrollRestoration") == "manual")
     ph.screenshot(path=os.path.join(shots, "v3-phone-landing.png"))
 
     # the years and the theme stay reachable down a very long page
@@ -327,8 +329,11 @@ with sync_playwright() as pw:
       const bar = document.querySelector('.header-right').getBoundingClientRect().bottom;
       const im = JSON.parse(document.getElementById('v3data').textContent)['2024-5'].i[9];
       const s = Math.max(tr.width / im.w, tr.height / im.h);   // the photo as the square cell crops it
+      // the returning copy is pinned to the document, so take its screen position off its page position
+      const pinned = f && f.classList.contains('on-page');
       return {fly: !!f,
-              targetTop: f ? parseFloat(f.style.top) : null, targetH: f ? parseFloat(f.style.height) : null,
+              targetTop: f ? parseFloat(f.style.top) - (pinned ? pageYOffset : 0) : null,
+              targetH: f ? parseFloat(f.style.height) : null,
               coverTop: tr.top + (tr.height - im.h * s) / 2, coverH: im.h * s,
               thumbCentre: tr.top + tr.height / 2, screenCentre: bar + (innerHeight - bar) / 2,
               bottomEdge: innerHeight}; }""")
@@ -367,6 +372,40 @@ with sync_playwright() as pw:
               shown: getComputedStyle(th).visibility === 'visible'}; }""")
     check("a thumbnail that was off screen is centred on return",
           abs(far["centre"] - far["screenCentre"]) < 20 and far["onScreen"] and far["shown"], far)
+
+    # the flight home stays on its thumbnail even if something scrolls the page mid-flight
+    # (a phone browser can restore the scroll of a history entry after the page has already placed itself)
+    ph.goto(B + "/v3/", wait_until="load"); ph.wait_for_timeout(1200)
+    jolt = ph.locator('.grid-cell img[data-k="2024-7"][data-n="2"]')
+    jolt.scroll_into_view_if_needed(); ph.wait_for_timeout(400)
+    jolt.tap(); ph.wait_for_timeout(1400)
+    ph.evaluate("() => document.getElementById('postStack').children[8].scrollIntoView({block: 'center'})")
+    ph.wait_for_timeout(400)
+    ph.go_back()
+    ph.wait_for_timeout(160)
+    ph.evaluate("() => scrollBy(0, -140)")       # the browser changing its mind about where the page sits
+    ph.wait_for_timeout(330)
+    stuck = ph.evaluate("""() => {
+      const f = document.querySelector('.post-fly');
+      const th = document.querySelector('.grid-cell img[data-k="2024-7"][data-n="9"]');
+      const tr = th.getBoundingClientRect();
+      const im = JSON.parse(document.getElementById('v3data').textContent)['2024-7'].i[8];
+      const s = Math.max(tr.width / im.w, tr.height / im.h);
+      const fr = f ? f.getBoundingClientRect() : null;
+      return {fly: !!f, flyTop: fr ? fr.top : null, flyH: fr ? fr.height : null,
+              coverTop: tr.top + (tr.height - im.h * s) / 2, coverH: im.h * s}; }""")
+    check("the photo is still in the air after the jolt", stuck["fly"], stuck)
+    check("and is still tracking its thumbnail, not the screen",
+          abs((stuck["flyTop"] + stuck["flyH"]) - (stuck["coverTop"] + stuck["coverH"])) < 90, stuck)
+    ph.wait_for_timeout(900)
+    rest = ph.evaluate("""() => {
+      const th = document.querySelector('.grid-cell img[data-k="2024-7"][data-n="9"]');
+      const tr = th.getBoundingClientRect();
+      return {shown: getComputedStyle(th).visibility === 'visible',
+              onScreen: tr.bottom > 0 && tr.top < innerHeight,
+              flies: document.querySelectorAll('.post-fly').length}; }""")
+    check("it lands on a thumbnail that is on screen and visible again",
+          rest["shown"] and rest["onScreen"] and rest["flies"] == 0, rest)
 
     # coming straight back out of a photo that was already on screen leaves the grid where it was
     target = ph.locator('.grid-cell img[data-k="2024-5"][data-n="10"]')

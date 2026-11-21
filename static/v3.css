@@ -208,8 +208,10 @@ body {
 .post-view.shown { opacity: 1; transition: opacity .3s var(--ease-open) .25s; }
 .post-view.instant, .post-view.instant.shown { transition: none; }
 /* Leaving with the zoom: the post fades and the page comes back into focus while the photo flies home */
-.post-view.leaving { pointer-events: none; transition: opacity .3s var(--ease-open); }
-.post-scrim.leaving { transition: opacity .45s var(--ease-open), backdrop-filter .45s var(--ease-open), -webkit-backdrop-filter .45s var(--ease-open); }
+/* Paced to the flight (.55s) so the grid is uncovered just as the photo arrives on it, rather than the
+   post vanishing early and leaving a bare grid with a hole in it while the photo is still travelling. */
+.post-view.leaving { pointer-events: none; transition: opacity .5s var(--ease-open); }
+.post-scrim.leaving { transition: opacity .5s var(--ease-open), backdrop-filter .5s var(--ease-open), -webkit-backdrop-filter .5s var(--ease-open); }
 .post-view:focus { outline: none; }
 
 .post-back {
@@ -270,13 +272,14 @@ body {
 
 /* The flying copy of the image: starts at the preview size and lands on the post image */
 .post-fly {
-  position: fixed;
+  position: fixed;   /* .on-page pins it to the document instead: see flyBetween */
   z-index: 400;
   display: block;
   pointer-events: none;
   transform-origin: 0 0;
   will-change: transform;
 }
+.post-fly.on-page { position: absolute; }
 
 .v3-badge {
   position: fixed;
