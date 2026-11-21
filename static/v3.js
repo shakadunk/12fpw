@@ -26,6 +26,10 @@
   var mqWide = window.matchMedia('(min-width: 720px)');
   var mqHover = window.matchMedia('(hover: hover) and (pointer: fine)');
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // The preview zone exists only on a wide window with a mouse. Browser zoom narrows the window in CSS pixels,
+  // so a laptop zoomed past ~200% gets the phone layout (no zone) while still having a mouse: every decision
+  // about the zone has to ask both questions, or the photo flies to a zone that is not there.
+  function hasZone() { return mqHover.matches && mqWide.matches; }
 
   // The preview and the post image use the SAME file, so the zoom never re-downloads or pops:
   // the desktop copy on wide screens, the phone copy on narrow ones.
@@ -137,7 +141,7 @@
   }
 
   archive.addEventListener('mouseover', function (e) {
-    if (!mqHover.matches) return;
+    if (!hasZone()) return;
     var img = e.target.closest('.grid-cell img');
     if (!img) return;
     if (previewHeld) {
@@ -147,7 +151,7 @@
     showPreview(img);
   });
   archive.addEventListener('mouseout', function (e) {
-    if (!mqHover.matches || previewHeld) return;   // while held, the photo stays up
+    if (!hasZone() || previewHeld) return;   // while held, the photo stays up
     if (e.target.closest('.grid-cell img')) preview.classList.remove('visible');
   });
 
@@ -352,6 +356,83 @@
     requestAnimationFrame(function () { layoutQueued = false; layoutPost(); });
   });
 
+  // ---------- keeping your place while the window changes size ----------
+  // Zooming the browser (or resizing the window) reflows everything. Safari has no scroll anchoring, so the
+  // scroll position would stay as a number while the photos under it changed size, and whatever you were
+  // looking at slid away. Remember which photo (or row) sits at the middle of the screen and the fraction
+  // of the way down it, and put that same spot back in the middle after the reflow.
+  var anchorPost = null, anchorGrid = null, resizing = false, anchorQueued = false;
+
+  function postAnchorNow() {
+    var kids = postStack.children;
+    if (!kids.length || !postView.classList.contains('open')) return null;
+    var cy = postView.getBoundingClientRect().top + postView.clientHeight / 2;
+    for (var i = 0; i < kids.length; i++) {
+      var r = kids[i].getBoundingClientRect();
+      if (r.bottom >= cy || i === kids.length - 1) return { i: i, f: r.height ? (cy - r.top) / r.height : 0 };
+    }
+    return null;
+  }
+  function gridProbeY() {
+    if (mqWide.matches) return preview.getBoundingClientRect().bottom + 12;
+    var bar = document.querySelector('.header-right');
+    return (bar ? bar.offsetHeight : 0) + 12;
+  }
+  function gridAnchorNow() {
+    var rows = document.querySelectorAll('.week-row');
+    var y = gridProbeY();
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i].getBoundingClientRect();
+      if (r.height && r.bottom >= y) return { i: i, f: (y - r.top) / r.height };
+    }
+    return null;
+  }
+  function rememberPlace() {
+    if (resizing) return;   // a scroll the browser makes while resizing must not overwrite the place we are holding
+    anchorPost = postAnchorNow();
+    anchorGrid = gridAnchorNow() || anchorGrid;
+  }
+  function onScrollRemember() {
+    if (anchorQueued) return;
+    anchorQueued = true;
+    requestAnimationFrame(function () { anchorQueued = false; rememberPlace(); });
+  }
+  window.addEventListener('scroll', onScrollRemember, { passive: true });
+  postView.addEventListener('scroll', onScrollRemember, { passive: true });
+
+  var restoreQueued = false;
+  window.addEventListener('resize', function () {
+    resizing = true;
+    if (restoreQueued) return;
+    restoreQueued = true;
+    // runs after the overlay and the post have been re-laid out (those listeners registered first)
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        restoreQueued = false;
+        if (anchorPost && postView.classList.contains('open')) {
+          var node = postStack.children[anchorPost.i];
+          if (node) {
+            var r = node.getBoundingClientRect();
+            var cy = postView.getBoundingClientRect().top + postView.clientHeight / 2;
+            postView.scrollTop += (r.top + anchorPost.f * r.height) - cy;
+          }
+        }
+        if (anchorGrid && !activeFly) {
+          var row = document.querySelectorAll('.week-row')[anchorGrid.i];
+          if (row) {
+            var rr = row.getBoundingClientRect();
+            window.scrollBy(0, (rr.top + anchorGrid.f * rr.height) - gridProbeY());
+          }
+        }
+        resizing = false;
+        rememberPlace();
+      });
+    });
+  });
+  // a held preview belongs to the zone; if the window stops having one, put it away
+  mqWide.addEventListener && mqWide.addEventListener('change', function () { if (!hasZone()) { hidePreview(); } });
+  setTimeout(rememberPlace, 0);
+
   function showPost(year, week, imageNum) {
     var fly = pendingFly;
     pendingFly = null;
@@ -451,8 +532,8 @@
         ensureThumbVisible(thumb);
         // With a mouse the photo flies back into the preview zone and waits there. On a phone there is no
         // preview zone, so it flies back down into its own thumbnail, where it came from.
-        var to = mqHover.matches ? previewRectFor(im) : (thumb ? thumbPhotoRect(thumb) : null);
-        if (to) ret = { from: imgEl.getBoundingClientRect(), to: to, src: bigOf(im), imgEl: imgEl, thumb: thumb, toPreview: mqHover.matches };
+        var to = hasZone() ? previewRectFor(im) : (thumb ? thumbPhotoRect(thumb) : null);
+        if (to) ret = { from: imgEl.getBoundingClientRect(), to: to, src: bigOf(im), imgEl: imgEl, thumb: thumb, toPreview: hasZone() };
       }
     }
 

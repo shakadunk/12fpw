@@ -480,6 +480,69 @@ with sync_playwright() as pw:
     check("but a chosen theme is not overridden by the device",
           tp.evaluate("() => document.documentElement.dataset.theme") == "dark")
     tp.close()
+    # ---------------- browser zoom on a laptop ----------------
+    # Zooming narrows the window in CSS pixels (200% on a 1440 window is 720 wide, 300% is 480) and shrinks its
+    # height too. Safari has no scroll anchoring, so emulate that: the page has to keep your place itself.
+    def zoom_to(pg, z):
+        pg.set_viewport_size({"width": round(1440 / z), "height": round(800 / z)}); pg.wait_for_timeout(700)
+
+    zp = br.new_page(viewport={"width": 1440, "height": 800})
+    zp.goto(B + "/v3/", wait_until="load"); zp.wait_for_timeout(1200)
+    zp.add_style_tag(content="*{overflow-anchor:none!important}")
+    POSTAT = """() => { const v = document.getElementById('postView'), st = document.getElementById('postStack');
+      const cy = v.getBoundingClientRect().top + v.clientHeight / 2;
+      for (let i = 0; i < st.children.length; i++) { const r = st.children[i].getBoundingClientRect();
+        if (r.bottom >= cy) return {img: i + 1, at: Math.round((cy - r.top) / r.height * 100) / 100}; } }"""
+    zp.evaluate("document.querySelector('.grid-cell img[data-k=\"2024-5\"][data-n=\"1\"]').click()"); zp.wait_for_timeout(1500)
+    zp.evaluate("""() => { const v = document.getElementById('postView'), r = document.getElementById('postStack').children[7].getBoundingClientRect();
+      v.scrollTop += (r.top + r.height / 2) - (v.getBoundingClientRect().top + v.clientHeight / 2); }""")
+    zp.wait_for_timeout(400)
+    held = []
+    for z in (1.25, 1.5, 2, 2.5, 3, 4, 1):
+        zoom_to(zp, z); a = zp.evaluate(POSTAT); held.append((z, a))
+    check("zooming in and out keeps the same photo in the middle of the post",
+          all(a["img"] == 8 and abs(a["at"] - 0.5) < 0.05 for z, a in held), held)
+
+    # back at 300% (a mouse, but the phone layout): the photo must fly to its thumbnail, not to a zone that is hidden
+    zoom_to(zp, 3)
+    zp.evaluate("""() => { const v = document.getElementById('postView'), r = document.getElementById('postStack').children[9].getBoundingClientRect();
+      v.scrollTop += (r.top + r.height / 2) - (v.getBoundingClientRect().top + v.clientHeight / 2); }""")
+    zp.wait_for_timeout(300)
+    zp.mouse.move(200, 150)
+    zp.keyboard.press("Escape"); zp.wait_for_timeout(250)
+    aim = zp.evaluate("""() => { const f = document.querySelector('.post-fly');
+      const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]').getBoundingClientRect();
+      return {fly: !!f, inZone: f ? getComputedStyle(document.getElementById('hoverPreview')).display : null,
+              flyTop: f ? parseFloat(f.style.top) - (f.classList.contains('on-page') ? pageYOffset : 0) : null,
+              thumbTop: th.top, thumbBottom: th.bottom}; }""")
+    check("zoomed past the phone breakpoint, going back starts a flight", aim["fly"], aim)
+    check("and aims inside its own thumbnail, not at the hidden preview zone",
+          aim["fly"] and aim["thumbTop"] - 2 <= aim["flyTop"] <= aim["thumbBottom"] + 2, aim)
+    zp.wait_for_timeout(1200)
+    check("the preview zone stays hidden after landing", zp.evaluate(
+        "() => getComputedStyle(document.getElementById('hoverPreview')).display") == "none")
+    zp.close()
+
+    # the archive keeps its place too
+    gp = br.new_page(viewport={"width": 1440, "height": 800})
+    gp.goto(B + "/v3/", wait_until="load"); gp.wait_for_timeout(1200)
+    gp.add_style_tag(content="*{overflow-anchor:none!important}")
+    gp.evaluate("document.querySelectorAll('.week-row')[9].scrollIntoView({block: 'center'})"); gp.wait_for_timeout(500)
+    ROW = """() => { const wide = innerWidth >= 720;
+      const y = (wide ? document.getElementById('hoverPreview').getBoundingClientRect().bottom
+                      : document.querySelector('.header-right').offsetHeight) + 12;
+      const rows = [...document.querySelectorAll('.week-row')];
+      for (let i = 0; i < rows.length; i++) { const r = rows[i].getBoundingClientRect();
+        if (r.height && r.bottom >= y) return {row: i, f: Math.round((y - r.top) / r.height * 100) / 100,
+                                                h: document.documentElement.scrollWidth > innerWidth + 1}; } }"""
+    gp.mouse.move(700, 500)
+    base = gp.evaluate(ROW); rows_seen = []
+    for z in (1.25, 1.5, 2, 2.5, 3, 1):
+        zoom_to(gp, z); rows_seen.append((z, gp.evaluate(ROW)))
+    check("zooming keeps the same archive row in view",
+          all(r["row"] == base["row"] and abs(r["f"] - base["f"]) < 0.08 for z, r in rows_seen), (base, rows_seen))
+    check("and never sideways-scrolls", not any(r["h"] for z, r in rows_seen), rows_seen)
+    gp.close()
     br.close()
 
 srv.terminate()
