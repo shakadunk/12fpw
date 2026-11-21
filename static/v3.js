@@ -164,7 +164,8 @@
     var t = thumb.getBoundingClientRect();
     var im = imageOf(thumb);
     if (!im || !im.w || !im.h) return { left: t.left, top: t.top, width: t.width, height: t.height };
-    var s = Math.max(t.width / im.w, t.height / im.h);
+    // phone grid: the photo is shown whole (object-fit: contain) inside its box, floating on the page
+    var s = Math.min(t.width / im.w, t.height / im.h);
     var w = im.w * s, h = im.h * s;
     return { left: t.left + (t.width - w) / 2, top: t.top + (t.height - h) / 2, width: w, height: h };
   }
@@ -512,6 +513,10 @@
   // Desktop: one click opens. Touch: the first tap previews, a tap on the preview opens.
   archive.addEventListener('click', function (e) {
     var img = e.target.closest('.grid-cell img');
+    if (!img) {   // phone: the empty margin around a floating photo counts as the photo
+      var cell = e.target.closest('.grid-cell');
+      img = cell && cell.querySelector('img');
+    }
     if (!img) return;
     e.preventDefault();
     releaseHold();

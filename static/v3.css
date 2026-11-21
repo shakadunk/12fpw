@@ -354,10 +354,11 @@ body {
   .grid-cell {
     flex: none;
     aspect-ratio: 1 / 1;
-    overflow: hidden;
-    background: var(--ph);
+    position: relative;
+    cursor: pointer;
   }
-  .grid-cell img { width: 100%; height: 100%; object-fit: cover; }
+  /* whole photo, never cropped, floating at 90% of its square on the page background */
+  .grid-cell img { position: absolute; inset: 5%; width: 90%; height: 90%; object-fit: contain; background: transparent; }
   .grid-cell img:hover { opacity: 1; }   /* no hover on a touch screen */
 
   .post-inner { padding: 56px 10px 40vh; }

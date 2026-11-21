@@ -328,7 +328,7 @@ with sync_playwright() as pw:
       const tr = th.getBoundingClientRect();
       const bar = document.querySelector('.header-right').getBoundingClientRect().bottom;
       const im = JSON.parse(document.getElementById('v3data').textContent)['2024-5'].i[9];
-      const s = Math.max(tr.width / im.w, tr.height / im.h);   // the photo as the square cell crops it
+      const s = Math.min(tr.width / im.w, tr.height / im.h);   // the photo shown whole inside its box
       // the returning copy is pinned to the document, so take its screen position off its page position
       const pinned = f && f.classList.contains('on-page');
       return {fly: !!f,
@@ -338,7 +338,7 @@ with sync_playwright() as pw:
               thumbCentre: tr.top + tr.height / 2, screenCentre: bar + (innerHeight - bar) / 2,
               bottomEdge: innerHeight}; }""")
     check("going back starts the zoom home", aim["fly"], aim)
-    check("it aims at the photo where the thumbnail crops it, not at the cell",
+    check("it aims at the photo where it floats in its cell, not at the cell",
           abs(aim["targetTop"] - aim["coverTop"]) < 2 and abs(aim["targetH"] - aim["coverH"]) < 2, aim)
     check("and lands well clear of the bottom edge, not flush against it",
           aim["targetTop"] + aim["targetH"] < aim["bottomEdge"] - 60, aim)
@@ -390,7 +390,7 @@ with sync_playwright() as pw:
       const th = document.querySelector('.grid-cell img[data-k="2024-7"][data-n="9"]');
       const tr = th.getBoundingClientRect();
       const im = JSON.parse(document.getElementById('v3data').textContent)['2024-7'].i[8];
-      const s = Math.max(tr.width / im.w, tr.height / im.h);
+      const s = Math.min(tr.width / im.w, tr.height / im.h);   // the photo shown whole inside its box
       const fr = f ? f.getBoundingClientRect() : null;
       return {fly: !!f, flyTop: fr ? fr.top : null, flyH: fr ? fr.height : null,
               coverTop: tr.top + (tr.height - im.h * s) / 2, coverH: im.h * s}; }""")
