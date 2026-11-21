@@ -249,18 +249,27 @@
     return { left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, width: w, height: h };
   }
 
-  // Keep that photo's own thumbnail on screen, clear of whatever sits at the top: the blank zone on a
-  // desktop, the sticky year bar on a phone.
+  // Put that photo's own thumbnail somewhere it can actually be seen before the flight home, clear of
+  // whatever sits at the top: the blank zone on a desktop, the sticky year bar on a phone. The page is
+  // still hidden behind the post while this happens, so the move itself is never seen.
   function ensureThumbVisible(thumb) {
     if (!thumb || !thumb.offsetParent) return;
     var r = thumb.getBoundingClientRect();
     var bar = document.querySelector('.header-right');
-    var top = mqWide.matches ? preview.getBoundingClientRect().bottom
-                             : (bar ? bar.getBoundingClientRect().bottom : 0);
-    var by = 0;
-    if (r.top < top + 12) by = r.top - top - 12;
-    else if (r.bottom > window.innerHeight - 12) by = r.bottom - (window.innerHeight - 12);
-    if (by) window.scrollBy(0, by);
+    // Its own height, not where it is sitting now: the bar is only stuck to the top once the page has
+    // scrolled, and measuring it while it is still down in the flow throws the sum off by its travel.
+    var top = mqWide.matches ? preview.getBoundingClientRect().bottom : (bar ? bar.offsetHeight : 0);
+    var bottom = window.innerHeight, margin = 16;
+    if (r.top >= top + margin && r.bottom <= bottom - margin) return;   // already comfortably in view: leave the grid alone
+    if (mqWide.matches) {
+      // only a row or so of grid is visible under the blank zone, so just bring it inside
+      window.scrollBy(0, r.top < top + margin ? r.top - top - margin : r.bottom - (bottom - margin));
+    } else {
+      // On a phone the photo flies back onto the thumbnail itself. Nudging it just inside the edge would
+      // land the photo flush against the bottom of the screen, which reads as "it went to the bottom"
+      // rather than "it went where it lives". Centre it in the space below the bar instead.
+      window.scrollBy(0, (r.top + r.height / 2) - (top + (bottom - top) / 2));
+    }
   }
 
   // After landing, the preview HOLDS that photo: it stays up until the mouse moves onto another thumbnail,

@@ -319,8 +319,24 @@ with sync_playwright() as pw:
     ph.evaluate("() => document.getElementById('postStack').children[9].scrollIntoView({block: 'center'})")
     ph.wait_for_timeout(500)
     ph.go_back()
-    ph.wait_for_timeout(250)
-    check("going back starts the zoom home", ph.evaluate("() => !!document.querySelector('.post-fly')"))
+    ph.wait_for_timeout(280)
+    aim = ph.evaluate("""() => {
+      const f = document.querySelector('.post-fly');
+      const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
+      const tr = th.getBoundingClientRect();
+      const bar = document.querySelector('.header-right').getBoundingClientRect().bottom;
+      const im = JSON.parse(document.getElementById('v3data').textContent)['2024-5'].i[9];
+      const s = Math.max(tr.width / im.w, tr.height / im.h);   // the photo as the square cell crops it
+      return {fly: !!f,
+              targetTop: f ? parseFloat(f.style.top) : null, targetH: f ? parseFloat(f.style.height) : null,
+              coverTop: tr.top + (tr.height - im.h * s) / 2, coverH: im.h * s,
+              thumbCentre: tr.top + tr.height / 2, screenCentre: bar + (innerHeight - bar) / 2,
+              bottomEdge: innerHeight}; }""")
+    check("going back starts the zoom home", aim["fly"], aim)
+    check("it aims at the photo where the thumbnail crops it, not at the cell",
+          abs(aim["targetTop"] - aim["coverTop"]) < 2 and abs(aim["targetH"] - aim["coverH"]) < 2, aim)
+    check("and lands well clear of the bottom edge, not flush against it",
+          aim["targetTop"] + aim["targetH"] < aim["bottomEdge"] - 60, aim)
     ph.wait_for_timeout(1400)
     ml = ph.evaluate("""() => {
       const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
@@ -336,6 +352,37 @@ with sync_playwright() as pw:
     check("phone: no preview is left hanging over the grid", not ml["preview"], ml)
     check("phone: the flying copy is cleaned up", ml["leftovers"] == 0, ml)
     ph.screenshot(path=os.path.join(shots, "v3-phone-landed-back.png"))
+
+    # when the photo's thumbnail is nowhere near the screen, the grid centres it rather than nudging it to an edge
+    ph.goto(B + "/v3/#2023-w20-i7", wait_until="load")
+    ph.wait_for_timeout(1500)
+    ph.locator("#postBack").tap()
+    ph.wait_for_timeout(1700)
+    far = ph.evaluate("""() => {
+      const th = document.querySelector('.grid-cell img[data-k="2023-20"][data-n="7"]');
+      const tr = th.getBoundingClientRect();
+      const bar = document.querySelector('.header-right').getBoundingClientRect().bottom;
+      return {centre: tr.top + tr.height / 2, screenCentre: bar + (innerHeight - bar) / 2,
+              onScreen: tr.top >= bar && tr.bottom <= innerHeight,
+              shown: getComputedStyle(th).visibility === 'visible'}; }""")
+    check("a thumbnail that was off screen is centred on return",
+          abs(far["centre"] - far["screenCentre"]) < 20 and far["onScreen"] and far["shown"], far)
+
+    # coming straight back out of a photo that was already on screen leaves the grid where it was
+    target = ph.locator('.grid-cell img[data-k="2024-5"][data-n="10"]')
+    target.scroll_into_view_if_needed()
+    ph.evaluate("""() => {
+      const r = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]').getBoundingClientRect();
+      const bar = document.querySelector('.header-right').offsetHeight;
+      scrollBy(0, (r.top + r.height / 2) - (bar + (innerHeight - bar) / 2)); }""")
+    ph.wait_for_timeout(500)
+    settle = ph.evaluate("() => Math.round(scrollY)")
+    target.tap()
+    ph.wait_for_timeout(1400)
+    ph.go_back()
+    ph.wait_for_timeout(1600)
+    moved = ph.evaluate("() => Math.round(scrollY)")
+    check("returning to a photo already in view does not move the grid", abs(moved - settle) < 2, (settle, moved))
 
     # the ARCHIVE button does the same
     ph.locator('.grid-cell img[data-k="2023-30"][data-n="2"]').tap()
