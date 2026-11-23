@@ -88,8 +88,9 @@
         x.classList.toggle('active', on);
         x.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
-      [].forEach.call(document.querySelectorAll('.fg-week'), function (w) {
-        w.style.display = (f === 'all' || w.dataset.year === f) ? '' : 'none';
+      // Whole sections, so a hidden year takes its sticky label with it
+      [].forEach.call(document.querySelectorAll('.fg-year'), function (s) {
+        s.style.display = (f === 'all' || s.dataset.year === f) ? '' : 'none';
       });
     });
   });

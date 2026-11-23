@@ -377,12 +377,22 @@ function v5Page(posts) {
     };
   }
 
-  const week = (p) => `  <div class="fg-week" data-year="${p.year}">
-    <button type="button" class="fg-label" data-k="${p.year}-${p.week}" title="Open week ${p.week} from the top"><b>${p.week}</b> <span>${p.year}</span></button>
-    <ul class="fg-row">
-${p.images.map((im, i) => `      <li class="fg-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
-    </ul>
-  </div>`;
+  // The year sits in its own column and stays put while its weeks scroll past, until the next year
+  // arrives and pushes it off. The week number travels with its own line of photos. On a phone there is
+  // no room for a year column, so each week carries its year inline instead, as V2 did.
+  const week = (p) => `      <div class="fg-week" data-year="${p.year}">
+        <button type="button" class="fg-label" data-k="${p.year}-${p.week}" aria-label="Open week ${p.week}, ${p.year}, from the top"><b>${p.week}</b> <span class="fg-yr">${p.year}</span></button>
+        <ul class="fg-row">
+${p.images.map((im, i) => `          <li class="fg-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
+        </ul>
+      </div>`;
+
+  const yearBlock = (y) => `  <section class="fg-year" data-year="${y}">
+    <div class="fg-sticky" aria-hidden="true">${y}</div>
+    <div class="fg-weeks">
+${posts.filter((p) => p.year === y).map(week).join('\n')}
+    </div>
+  </section>`;
 
   return `<!doctype html>
 <html lang="en">
@@ -423,7 +433,7 @@ ${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="f
 </div>
 
 <main class="fullgrid" id="archive">
-${posts.map(week).join('\n')}
+${years.map(yearBlock).join('\n')}
 </main>
 
 <div class="v5-badge">V5 PREVIEW</div>

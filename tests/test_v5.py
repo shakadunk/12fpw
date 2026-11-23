@@ -61,6 +61,42 @@ with sync_playwright() as pw:
     check("the header is in the flow, so it scrolls away", g["headStatic"] == "static", g["headStatic"])
     check("the grid starts at the top: no blank landing to scroll past", g["archTop"] < 200, g["archTop"])
     check("no hover preview layer exists at all", g["noPreview"])
+
+    # The title is centred on the screen, not in whatever gap the toggle and the years leave between them
+    ttl = pg.evaluate("""() => { const b = document.querySelector('.site-head .site-name').getBoundingClientRect();
+      return Math.abs((b.left + b.width / 2) - innerWidth / 2); }""")
+    check("the title is centred on the screen", ttl <= 1.5, ttl)
+
+    # The year stands in its own column and stays put while its weeks go by; the week number travels
+    # with its own line of photos.
+    # Resolve --mute and --text in whatever theme is running, rather than assuming one
+    yr = pg.evaluate("""() => { const s = document.querySelector('.fg-sticky'), l = document.querySelector('.fg-label');
+      const probe = document.createElement('span'); document.body.appendChild(probe);
+      probe.style.color = 'var(--mute)'; const mute = getComputedStyle(probe).color;
+      probe.style.color = 'var(--text)'; const text = getComputedStyle(probe).color;
+      probe.remove();
+      return {pos: getComputedStyle(s).position,
+              year: getComputedStyle(s).color, week: getComputedStyle(l.querySelector('b')).color,
+              mute: mute, text: text,
+              inlineYearHidden: getComputedStyle(l.querySelector('.fg-yr')).display === 'none',
+              yearLeftOfWeek: s.getBoundingClientRect().left < l.getBoundingClientRect().left,
+              sections: document.querySelectorAll('.fg-year').length}; }""")
+    check("the year sits to the left of the week number", yr["yearLeftOfWeek"], yr)
+    check("one section per year", yr["sections"] == len(years), yr)
+    check("the year is grey and sticky", yr["pos"] == "sticky" and yr["year"] == yr["mute"], yr)
+    check("the week number keeps the text colour, not the grey", yr["week"] == yr["text"] and yr["week"] != yr["mute"], yr)
+    check("and the year is not repeated on every line", yr["inlineYearHidden"], yr)
+
+    bounds = pg.evaluate("""() => [...document.querySelectorAll('.fg-year')].map(s => {
+      const b = s.getBoundingClientRect(); return Math.round(b.top + scrollY); })""")
+    pg.evaluate("window.scrollTo(0, %d)" % (bounds[1] - 400)); pg.wait_for_timeout(400)
+    mid = pg.evaluate("() => Math.round(document.querySelector('.fg-sticky').getBoundingClientRect().top)")
+    check("it stays put while that year's weeks scroll past", abs(mid - 12) <= 2, mid)
+    pg.evaluate("window.scrollTo(0, %d)" % (bounds[1] + 40)); pg.wait_for_timeout(400)
+    over = pg.evaluate("""() => [...document.querySelectorAll('.fg-sticky')].map(s =>
+      Math.round(s.getBoundingClientRect().top))""")
+    check("until the next year pushes it up into its place", over[0] < 0 and abs(over[1] - 12) <= 2, over)
+    pg.evaluate("window.scrollTo(0, 0)"); pg.wait_for_timeout(400)
     check("no sideways scrolling at 1440", not g["overflow"])
     pg.screenshot(path=os.path.join(shots, "v5-desktop-landing.png"))
 
@@ -113,6 +149,14 @@ with sync_playwright() as pw:
     check("photos carry the reverse-image link", "lens.google.com" in (po["href"] or "") and po["target"] == "_blank", po["href"])
     check("the grid is hidden while the week covers it", po["gridHidden"] == "hidden", po["gridHidden"])
     check("the flying copy is tidied away", not po["fly"])
+    # The week ends where its photos end: a margin after the last one, not half a screen of nothing
+    tail = pg.evaluate("""() => { const v = document.getElementById('postView'), st = document.getElementById('postStack');
+      const last = st.children[st.children.length - 1];
+      const was = v.scrollTop; v.scrollTop = v.scrollHeight;
+      const gap = v.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom;
+      v.scrollTop = was;
+      return {gap: Math.round(gap), vh: Math.round(v.getBoundingClientRect().height)}; }""")
+    check("no dead space after the last photo", tail["gap"] < tail["vh"] * 0.25, tail)
     pg.screenshot(path=os.path.join(shots, "v5-desktop-post.png"))
 
     # ---------------- leaving: it flies home to its own thumbnail ----------------
@@ -170,11 +214,14 @@ with sync_playwright() as pw:
     # ---------------- year filter and theme ----------------
     pg.locator('.site-head .years button[data-filter="2024"]').click()
     pg.wait_for_timeout(300)
+    # Whole sections are hidden, so offsetParent rather than the week's own display tells you what is left
     yf = pg.evaluate("""() => {
-      const shown = [...document.querySelectorAll('.fg-week')].filter(w => getComputedStyle(w).display !== 'none');
+      const shown = [...document.querySelectorAll('.fg-week')].filter(w => w.offsetParent !== null);
       return {shown: shown.length, years: [...new Set(shown.map(w => w.dataset.year))],
+              stickies: [...document.querySelectorAll('.fg-sticky')].filter(s => s.offsetParent !== null).length,
               marked: [...document.querySelectorAll('.years button[data-filter="2024"]')].every(b => b.classList.contains('active'))}; }""")
     check("the year filter shows only that year", yf["years"] == ["2024"], yf)
+    check("and the hidden year takes its sticky label with it", yf["stickies"] <= 1, yf)
     check("and both copies of the years are marked", yf["marked"], yf)
     pg.locator('.site-head .years button[data-filter="all"]').click()
     pg.wait_for_timeout(300)
@@ -212,10 +259,18 @@ with sync_playwright() as pw:
     check("and stays away while you head down", not sp.evaluate(SHOW))
     sp.evaluate("window.scrollTo(0, 3000)"); sp.wait_for_timeout(400)
     check("heading back up brings it in", sp.evaluate(SHOW))
+    # V2's frosted band, not a flat panel: the tint and blur live on ::before, feathered along the bottom
     bar = sp.evaluate("""() => { const s = document.getElementById('slimbar');
-      return {top: Math.round(s.getBoundingClientRect().top), opaque: getComputedStyle(s).backgroundColor,
+      const be = getComputedStyle(s, '::before');
+      return {top: Math.round(s.getBoundingClientRect().top),
+              tint: be.backgroundColor, blur: be.backdropFilter || be.webkitBackdropFilter,
+              feather: be.maskImage || be.webkitMaskImage,
+              flat: getComputedStyle(s).borderBottomWidth,
               years: s.querySelectorAll('.years button').length, hasTop: !!s.querySelector('#slimTop')}; }""")
-    check("sitting at the top, opaque", bar["top"] <= 1 and "rgba(0, 0, 0, 0)" != bar["opaque"], bar)
+    check("sitting at the top", bar["top"] <= 1, bar)
+    check("frosted, not a flat panel", "blur" in (bar["blur"] or "") and bar["tint"] != "rgba(0, 0, 0, 0)", bar)
+    check("and feathered out along the bottom instead of ruled off",
+          "gradient" in (bar["feather"] or "") and bar["flat"] == "0px", bar)
     check("carrying every year plus ALL", bar["years"] == len(years) + 1, bar["years"])
     sp.click("#slimTop")
     sp.wait_for_timeout(2200)

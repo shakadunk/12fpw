@@ -10,12 +10,14 @@
   --line: #333; --ph: #111;
   --font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
   --pad: clamp(16px, 3vw, 40px);   /* V2's page gutter */
+  --bar-tint: rgba(0, 0, 0, .26);  /* V2's frosted scroll-up bar */
   --ease-open: cubic-bezier(.4, 0, .2, 1);
   color-scheme: dark;
 }
 [data-theme="light"] {
   --bg: #fff; --fg: #000; --text: #111; --mute: #6e6e6e;
   --line: #d8d8d8; --ph: #eee;
+  --bar-tint: rgba(255, 255, 255, .26);
   color-scheme: light;
 }
 
@@ -31,10 +33,12 @@ body {
 
 /* === HEADER (V2) === */
 /* In the flow, so it scrolls away and the grid gets the whole screen; the slimbar brings it back. */
+/* Three tracks with equal outer columns, so the title is centred on the screen rather than in whatever
+   space the theme toggle and the years happen to leave between them. */
 .site-head,
 .slimbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
   gap: 1rem;
   font-size: 12px;
@@ -43,6 +47,9 @@ body {
   text-transform: uppercase;
 }
 .site-head { padding: var(--pad); }
+.site-head .theme-toggle { grid-column: 1; justify-self: start; }
+.site-head .site-name { grid-column: 2; justify-self: center; }
+.site-head .years { grid-column: 3; justify-self: end; }
 .site-name { color: var(--fg); white-space: nowrap; }
 .site-name .short { display: none; }
 
@@ -72,13 +79,25 @@ body {
   grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
   padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
   transform: translateY(calc(-100% - 12px));
   visibility: hidden;
   transition: transform .2s ease, visibility 0s linear .2s;
 }
 .slimbar.show { transform: translateY(0); visibility: visible; transition: transform .2s ease, visibility 0s; }
+/* V2's frosted band rather than a flat panel with a rule under it: blur and a light tint, feathered out
+   along the bottom so it fades into the photos instead of cutting a line across them. */
+.slimbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--bar-tint);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 20px), transparent 100%);
+}
 .slimbar .theme-toggle { grid-column: 1; justify-self: start; }
 .slimbar .slim-top { grid-column: 2; justify-self: center; }
 .slimbar .years { grid-column: 3; justify-self: end; }
@@ -95,6 +114,7 @@ body {
    anchor always find the week you are looking at instead of landing in a gap and picking a neighbour. */
 .fullgrid { display: flex; flex-direction: column; padding: 0 var(--pad) 72px; }
 .fg-week { padding-bottom: 22px; }
+.fg-sticky { display: none; }   /* no room for a year column on a phone; the week carries its year */
 .fg-label {
   display: block;
   margin: 0 0 6px;
@@ -118,9 +138,26 @@ body {
   transition: opacity .2s;
 }
 @media (min-width: 900px) {
-  .fg-week { display: grid; grid-template-columns: 34px 1fr; gap: 0 14px; align-items: start; padding-bottom: 14px; }
+  /* Year, then week, then the photos. The year is one cell spanning its whole section, so it stays put
+     while that year's weeks scroll past it and only leaves when the next year's label pushes it off. */
+  .fg-year { display: grid; grid-template-columns: 30px 1fr; gap: 0 12px; }
+  .fg-sticky {
+    display: block;
+    grid-column: 1;
+    grid-row: 1;
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    padding-top: 2px;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: .06em;
+    color: var(--mute);   /* the year stays grey; the week numbers keep the text colour */
+  }
+  .fg-weeks { grid-column: 2; min-width: 0; }
+  .fg-week { display: grid; grid-template-columns: 22px 1fr; gap: 0 12px; align-items: start; padding-bottom: 14px; }
   .fg-label { padding-top: 2px; margin: 0; }
-  .fg-label b, .fg-label span { display: block; }
+  .fg-yr { display: none; }   /* the year is in the sticky column now, not on every line */
   .fg-row { grid-template-columns: repeat(12, 1fr); gap: 3px; }
 }
 @media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
@@ -158,7 +195,9 @@ body {
   padding: 2px 6px 2px 0;
 }
 
-.col { max-width: 680px; margin: 0 auto; padding: 96px 20px 50vh; }   /* V2's reading column */
+/* V2's reading column. The tail is just a margin after the last photo, not half a screen of nothing:
+   the week ends where the photos end. */
+.col { max-width: 680px; margin: 0 auto; padding: 96px 20px 72px; }
 .post-head {
   text-align: center;
   font-size: 12px;
@@ -235,7 +274,7 @@ body {
   .site-name .short { display: inline; }
   .site-head { padding: 14px var(--pad); }
   .years { gap: .9rem; }
-  .col { padding: 56px 14px 40vh; }
+  .col { padding: 56px 14px 48px; }
   .post-stack { gap: 14px; }
   .post-back { top: 10px; left: 8px; padding: 10px 14px 10px 10px; }   /* a thumb-sized target */
   .v5-badge { bottom: 10px; left: 10px; }
