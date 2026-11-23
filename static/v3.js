@@ -15,7 +15,10 @@
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   var archive = document.getElementById('archive');
   var preview = document.getElementById('hoverPreview');
+  var previewScrim = document.getElementById('previewScrim');
   var previewImg = document.getElementById('previewImg');
+  var siteHead = document.querySelector('.site-head');
+  var slimbar = document.getElementById('slimbar');
   var postView = document.getElementById('postView');
   var postHead = document.getElementById('postHead');
   var postTextEl = document.getElementById('postText');
@@ -35,9 +38,11 @@
   // the desktop copy on wide screens, the phone copy on narrow ones.
   function bigOf(im) { return (mqWide.matches ? im.u : (im.s || im.u)); }
 
-  // ---------- blank top zone (desktop only) ----------
-  // Sized so about 1.5 rows of the grid show at the bottom. Row heights change with window width and
-  // image loading, so measure instead of using a fixed vh.
+  // ---------- the sunken landing (desktop only) ----------
+  // Empty space under the header so only about 1.5 rows show at the bottom when you arrive: hover one and
+  // the photo fills the space above it, which is how the gesture teaches itself. Unlike V3 this is ordinary
+  // flow, not a fixed panel, so scrolling carries the grid up over the whole screen.
+  // Row heights change with window width and image loading, so measure instead of using a fixed vh.
   var ROWS_SHOWN = 1.5;
   function rowReady(row) {
     var imgs = row.querySelectorAll('img');
@@ -45,13 +50,15 @@
     return true;
   }
   function sizeOverlay() {
-    if (!mqWide.matches) { html.style.removeProperty('--overlay-h'); return; }
+    if (!mqWide.matches) { html.style.removeProperty('--sink-h'); return; }
     var rows = [].slice.call(document.querySelectorAll('.week-row')).filter(function (r) { return r.offsetHeight > 0; });
     if (rows.length < 2 || !rowReady(rows[0]) || !rowReady(rows[1])) return;
     var visible = rows[0].offsetHeight + (ROWS_SHOWN - 1) * rows[1].offsetHeight;
-    // Never let the grid zone take more than 45% of the screen (keeps the preview roomy)
+    // Never let the grid take more than 45% of the screen on arrival (keeps the landing roomy)
     var capped = Math.min(visible, window.innerHeight * 0.45);
-    html.style.setProperty('--overlay-h', (window.innerHeight - capped) + 'px');
+    // The header is in the flow now, so it eats into the space before the grid: take it off the sink.
+    var headH = siteHead ? siteHead.offsetHeight : 0;
+    html.style.setProperty('--sink-h', Math.max(0, window.innerHeight - capped - headH) + 'px');
   }
   var sizeQueued = false;
   function scheduleSize() {
@@ -69,28 +76,32 @@
   // The page follows the device's own light or dark setting (set before paint, in the page's head).
   // Tapping the toggle overrides that for this person, on this device, and is remembered. Setting it back
   // to whatever the device is doing clears the override, so it follows the device again from then on.
-  var toggle = document.getElementById('themeToggle');
+  var toggles = [].slice.call(document.querySelectorAll('.theme-toggle'));   // one in the header, one in the scroll-up bar
   var mqLight = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
   function systemTheme() { return mqLight && mqLight.matches ? 'light' : 'dark'; }
   function savedTheme() { try { var t = localStorage.getItem('theme'); return (t === 'light' || t === 'dark') ? t : null; } catch (e) { return null; } }
 
   function paintTheme() {
     var dark = html.getAttribute('data-theme') !== 'light';
-    toggle.textContent = dark ? 'LIGHT' : 'DARK';
-    toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    toggles.forEach(function (t) {
+      t.textContent = dark ? 'LIGHT' : 'DARK';
+      t.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+    });
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', dark ? '#000000' : '#ffffff');   // the browser's own bars, on a phone
   }
   paintTheme();
 
-  toggle.addEventListener('click', function () {
-    var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', next);
-    try {
-      if (next === systemTheme()) localStorage.removeItem('theme');   // back in step with the device: follow it again
-      else localStorage.setItem('theme', next);
-    } catch (e) {}
-    paintTheme();
+  toggles.forEach(function (t) {
+    t.addEventListener('click', function () {
+      var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      try {
+        if (next === systemTheme()) localStorage.removeItem('theme');   // back in step with the device: follow it again
+        else localStorage.setItem('theme', next);
+      } catch (e) {}
+      paintTheme();
+    });
   });
 
   // The device can change on its own (a schedule, or sunset). Follow it, unless this person has chosen.
@@ -105,15 +116,15 @@
   }
 
   // ---------- year filter ----------
+  // The same set of years appears twice (header and scroll-up bar), so a click marks both copies.
   [].forEach.call(document.querySelectorAll('.year-filters button'), function (b) {
     b.addEventListener('click', function () {
-      [].forEach.call(document.querySelectorAll('.year-filters button'), function (x) {
-        x.classList.remove('active');
-        x.setAttribute('aria-pressed', 'false');
-      });
-      b.classList.add('active');
-      b.setAttribute('aria-pressed', 'true');
       var f = b.dataset.filter;
+      [].forEach.call(document.querySelectorAll('.year-filters button'), function (x) {
+        var on = x.dataset.filter === f;
+        x.classList.toggle('active', on);
+        x.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
       [].forEach.call(document.querySelectorAll('.year-section'), function (sec) {
         sec.style.display = (f === 'all' || sec.dataset.year === f) ? '' : 'none';
       });
@@ -129,10 +140,12 @@
     previewImg.src = bigOf(im);
     previewImg.alt = '';
     preview.classList.add('visible');
+    previewScrim.classList.add('visible');
   }
   function hidePreview() {
     releaseHold();
     preview.classList.remove('visible');
+    previewScrim.classList.remove('visible');
   }
 
   function imageOf(img) {
@@ -152,7 +165,10 @@
   });
   archive.addEventListener('mouseout', function (e) {
     if (!hasZone() || previewHeld) return;   // while held, the photo stays up
-    if (e.target.closest('.grid-cell img')) preview.classList.remove('visible');
+    if (e.target.closest('.grid-cell img')) {
+      preview.classList.remove('visible');
+      previewScrim.classList.remove('visible');
+    }
   });
 
   // ---------- the zoom ----------
@@ -263,27 +279,17 @@
     return { left: b.left + (b.width - w) / 2, top: b.top + (b.height - h) / 2, width: w, height: h };
   }
 
-  // Put that photo's own thumbnail somewhere it can actually be seen before the flight home, clear of
-  // whatever sits at the top: the blank zone on a desktop, the sticky year bar on a phone. The page is
-  // still hidden behind the post while this happens, so the move itself is never seen.
+  // Put that photo's own thumbnail somewhere it can actually be seen before the flight home. The grid now
+  // owns the whole screen on every width, so there is no pinned panel to clear: centre it. Nudging it just
+  // inside an edge would land the photo flush against the bottom, which reads as "it went to the bottom"
+  // rather than "it went where it lives". The page is still hidden behind the post while this happens,
+  // so the move itself is never seen.
   function ensureThumbVisible(thumb) {
     if (!thumb || !thumb.offsetParent) return;
     var r = thumb.getBoundingClientRect();
-    var bar = document.querySelector('.header-right');
-    // Its own height, not where it is sitting now: the bar is only stuck to the top once the page has
-    // scrolled, and measuring it while it is still down in the flow throws the sum off by its travel.
-    var top = mqWide.matches ? preview.getBoundingClientRect().bottom : (bar ? bar.offsetHeight : 0);
     var bottom = window.innerHeight, margin = 16;
-    if (r.top >= top + margin && r.bottom <= bottom - margin) return;   // already comfortably in view: leave the grid alone
-    if (mqWide.matches) {
-      // only a row or so of grid is visible under the blank zone, so just bring it inside
-      window.scrollBy(0, r.top < top + margin ? r.top - top - margin : r.bottom - (bottom - margin));
-    } else {
-      // On a phone the photo flies back onto the thumbnail itself. Nudging it just inside the edge would
-      // land the photo flush against the bottom of the screen, which reads as "it went to the bottom"
-      // rather than "it went where it lives". Centre it in the space below the bar instead.
-      window.scrollBy(0, (r.top + r.height / 2) - (top + (bottom - top) / 2));
-    }
+    if (r.top >= margin && r.bottom <= bottom - margin) return;   // already comfortably in view: leave the grid alone
+    window.scrollBy(0, (r.top + r.height / 2) - bottom / 2);
   }
 
   // After landing, the preview HOLDS that photo: it stays up until the mouse moves onto another thumbnail,
@@ -310,6 +316,7 @@
     preview.style.transition = 'none';          // swap in with no fade, exactly where the flight ended
     previewImg.src = ret.src;
     preview.classList.add('visible');
+    previewScrim.classList.add('visible');
     void preview.offsetHeight;
     preview.style.transition = t;
     holdPreview();
@@ -373,11 +380,9 @@
     }
     return null;
   }
-  function gridProbeY() {
-    if (mqWide.matches) return preview.getBoundingClientRect().bottom + 12;
-    var bar = document.querySelector('.header-right');
-    return (bar ? bar.offsetHeight : 0) + 12;
-  }
+  // The line we judge "which row are you on" by. Nothing is pinned over the grid any more (the scroll-up
+  // bar is only there on the way up), so it is just inside the top of the screen on every width.
+  function gridProbeY() { return 12; }
   function gridAnchorNow() {
     var rows = document.querySelectorAll('.week-row');
     var y = gridProbeY();
@@ -486,12 +491,17 @@
     currentPostKey = key;
     layoutPost();   // sizes every image like the preview, so the space is reserved before anything decodes
 
-    // Scroll so the chosen image's centre lands on the window's centre
-    var n = Math.min(Math.max(imageNum, 1), post.i.length);
+    // imageNum 0 means "open at the top", which is what the week number does: you arrive at the week's
+    // writing and scroll down into the photos. A thumbnail passes its own number and lands on that photo.
+    var atTop = !imageNum;
+    var n = Math.min(Math.max(imageNum || 1, 1), post.i.length);
     var target = postStack.children[n - 1];
-    var r = target.getBoundingClientRect();
-    var c = postView.getBoundingClientRect();
-    postView.scrollTop += (r.top + r.height / 2) - (c.top + c.height / 2);
+    if (!atTop) {
+      // Scroll so the chosen image's centre lands on the window's centre
+      var r = target.getBoundingClientRect();
+      var c = postView.getBoundingClientRect();
+      postView.scrollTop += (r.top + r.height / 2) - (c.top + c.height / 2);
+    }
     postView.focus({ preventScroll: true });
 
     // A fast double-tap on a thumbnail must not land on the image and open its link by accident
@@ -577,12 +587,13 @@
     }, ret ? 650 : 260);
   }
 
-  // The address hash (#2024-w5-i5) drives the view, so the Back button and direct links both work
+  // The address hash drives the view, so the Back button and direct links both work.
+  // #2024-w5-i5 opens on that photo; #2024-w5 opens the week at its writing.
   function route() {
-    var m = /^#(\d{4})-w(\d{1,2})-i(\d{1,2})$/.exec(location.hash);
+    var m = /^#(\d{4})-w(\d{1,2})(?:-i(\d{1,2}))?$/.exec(location.hash);
     if (m) {
       if (currentKey === m[0] && postView.classList.contains('open')) return;
-      if (showPost(m[1], m[2], +m[3])) { currentKey = m[0]; return; }
+      if (showPost(m[1], m[2], m[3] ? +m[3] : 0)) { currentKey = m[0]; return; }
     }
     closePostView();
   }
@@ -595,8 +606,19 @@
     route();
   }
 
+  // The week number opens the week from the top, where its writing is
+  function openWeek(key) {
+    pendingFly = null;
+    openedFromGrid = true;
+    hidePreview();
+    location.hash = key.replace('-', '-w');
+    route();
+  }
+
   // Desktop: one click opens. Touch: the first tap previews, a tap on the preview opens.
   archive.addEventListener('click', function (e) {
+    var num = e.target.closest('.week-num');
+    if (num) { e.preventDefault(); releaseHold(); openWeek(num.dataset.k); return; }
     var img = e.target.closest('.grid-cell img');
     if (!img) {   // phone: the empty margin around a floating photo counts as the photo
       var cell = e.target.closest('.grid-cell');
@@ -617,6 +639,76 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && postView.classList.contains('open')) leavePost();
   });
+
+  // ---------- scroll-up bar ----------
+  // The header scrolls away with the page now, so the controls come back as a thin bar whenever you head
+  // back up. Scrolling down does not hide it at once: it lingers, and resting the mouse on it holds it.
+  // The first time you scroll down from the top it slides in briefly and leaves again, so you learn it is there.
+  if (slimbar) {
+    var slimTop = document.getElementById('slimTop');
+    var lastSlimY = window.pageYOffset, slimTicking = false;
+    function hideDelay() { return mqWide.matches ? 1800 : 1400; }
+    var hideTimer = 0, hidePending = false, overBar = false, hinted = false;
+
+    function cancelHide() { clearTimeout(hideTimer); hideTimer = 0; }
+    function hideSlim() { cancelHide(); hidePending = false; slimbar.classList.remove('show'); }
+    function scheduleHide() {
+      if (hideTimer || !slimbar.classList.contains('show')) return;
+      hidePending = true;
+      hideTimer = setTimeout(function () {
+        hideTimer = 0;
+        if (overBar) return;                 // mouse is resting on the bar: wait for it to leave
+        hideSlim();
+      }, hideDelay());
+    }
+    slimbar.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { overBar = true; cancelHide(); } });
+    slimbar.addEventListener('pointerleave', function (e) {
+      if (e.pointerType !== 'mouse') return;
+      overBar = false;
+      if (hidePending) scheduleHide();       // it was on its way out: restart the countdown
+    });
+
+    function topZone() { return siteHead ? siteHead.offsetHeight : 120; }
+    function slimUpdate() {
+      slimTicking = false;
+      var y = window.pageYOffset;
+      var dy = y - lastSlimY;
+      if (y <= topZone()) { hideSlim(); lastSlimY = y; return; }   // the header itself is still on screen
+      if (Math.abs(dy) < 6) return;                                // ignore tiny movements
+      if (dy < 0) { cancelHide(); hidePending = false; slimbar.classList.add('show'); }
+      else if (!hinted && !slimbar.classList.contains('show')) { hinted = true; slimbar.classList.add('show'); scheduleHide(); }
+      else if (!overBar) scheduleHide();
+      else hidePending = true;
+      lastSlimY = y;
+    }
+    window.addEventListener('scroll', function () {
+      if (!slimTicking) { slimTicking = true; requestAnimationFrame(slimUpdate); }
+    }, { passive: true });
+
+    // TOP: glide back up through the page rather than teleport, so you keep your bearings on a long archive.
+    // Any wheel, touch, key or mouse press stops it where it is.
+    var flyId = 0;
+    function cancelFlyTop() { if (flyId) { cancelAnimationFrame(flyId); flyId = 0; } }
+    function flyToTop() {
+      var from = window.pageYOffset;
+      if (from <= 0) return;
+      if (reduceMotion.matches) { window.scrollTo(0, 0); return; }
+      var dur = Math.min(1400, Math.max(450, 350 + from * 0.04));
+      var t0 = null;
+      function ease(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }   // ease in-out cubic
+      function step(ts) {
+        if (t0 === null) t0 = ts;
+        var t = Math.min(1, (ts - t0) / dur);
+        window.scrollTo(0, Math.round(from * (1 - ease(t))));
+        flyId = t < 1 ? requestAnimationFrame(step) : 0;
+      }
+      flyId = requestAnimationFrame(step);
+    }
+    ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) {
+      window.addEventListener(ev, cancelFlyTop, { passive: true });
+    });
+    if (slimTop) slimTop.addEventListener('click', function () { hidePreview(); flyToTop(); });
+  }
 
   route();   // a link ending in #2024-w5-i5 opens straight to that image
 })();

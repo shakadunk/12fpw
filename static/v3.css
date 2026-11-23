@@ -8,8 +8,15 @@
   --bg: #000; --fg: #fff; --text: #f0f0f0; --mute: #8a8a8a;
   --line: #333; --ph: #111;
   --font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
-  /* Height of the blank top zone. Fallback only; v3.js measures it so ~1.5 rows show at the bottom. */
-  --overlay-h: 85vh;
+  /* The sunken landing: empty space under the header so only ~1.5 rows show at the bottom on arrival.
+     It is ordinary flow, not a fixed panel, so it scrolls away and the grid takes the whole screen.
+     Fallback only; v3.js measures it. */
+  --sink-h: 55vh;
+  /* The centred hover preview, and the frosted layer behind it. Tweak these two to taste. */
+  --preview-w: 60vw;
+  --preview-h: 66vh;
+  --scrim-blur: 14px;
+  --scrim-tint: rgba(0, 0, 0, .55);
   /* Easing for the open transition: gentle start, soft landing. Tweak here. */
   --ease-open: cubic-bezier(.4, 0, .2, 1);
   color-scheme: dark;
@@ -17,6 +24,7 @@
 [data-theme="light"] {
   --bg: #fff; --fg: #000; --text: #111; --mute: #6e6e6e;
   --line: #d8d8d8; --ph: #eee;
+  --scrim-tint: rgba(255, 255, 255, .6);
   color-scheme: light;
 }
 
@@ -37,13 +45,18 @@ body {
 
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* === FIXED HEADER ELEMENTS === */
+/* === HEADER === */
+/* In the flow, so it scrolls away with the page and the grid gets the whole screen. The slimbar
+   below brings the controls back on the way up. */
+.site-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+}
 
 .site-desc {
-  position: fixed;
-  top: 32px;
-  left: 32px;
-  z-index: 110;
   max-width: 280px;
   font-size: 13px;
   line-height: 1.5;
@@ -65,10 +78,6 @@ body {
 .site-desc .site-title { color: var(--fg); }
 
 .header-right {
-  position: fixed;
-  top: 32px;
-  right: 32px;
-  z-index: 110;
   display: flex;
   align-items: flex-start;
   gap: 24px;
@@ -102,13 +111,48 @@ body {
 }
 .theme-toggle:hover { color: var(--fg); }
 
-/* === PREVIEW (hover on desktop, tap on phones) === */
-.hover-preview {
+/* === SCROLL-UP BAR === */
+/* Hidden until you scroll up, so nothing sits over the grid while you are moving down it. */
+.slimbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: var(--overlay-h);
+  z-index: 120;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: calc(10px + env(safe-area-inset-top)) 32px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  transform: translateY(calc(-100% - 12px));
+  visibility: hidden;
+  transition: transform .2s ease, visibility 0s linear .2s;
+}
+.slimbar.show { transform: translateY(0); visibility: visible; transition: transform .2s ease, visibility 0s; }
+.slimbar .theme-toggle { grid-column: 1; justify-self: start; }
+.slimbar .slim-top { grid-column: 2; justify-self: center; }
+.slimbar .year-filters { grid-column: 3; justify-self: end; flex-direction: row; gap: 14px; }
+.slim-top {
+  font: inherit;
+  font-size: 13px;
+  color: var(--mute);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  letter-spacing: .08em;
+  transition: color .15s;
+}
+.slim-top:hover { color: var(--fg); }
+
+/* === PREVIEW (hover on desktop; phones go straight into the week) === */
+/* Centred on the screen, in the same place on the landing as halfway down the archive: the sunken
+   landing simply puts the first rows under it, so the first hover lands in the empty space and
+   teaches the gesture. */
+.hover-preview {
+  position: fixed;
+  inset: 0;
   z-index: 105;
   pointer-events: none;
   opacity: 0;
@@ -116,29 +160,31 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 320px;
 }
-.hover-preview img { display: block; width: 90%; height: 90%; object-fit: contain; }
+.hover-preview img { display: block; width: var(--preview-w); height: var(--preview-h); object-fit: contain; }
 .hover-preview.visible { opacity: 1; }
 
-/* === BLANK TOP ZONE === */
-.top-overlay {
+/* Frosts the grid behind the preview. The blur is always applied and the whole layer fades, which is far
+   smoother than animating backdrop-filter itself. Never takes the mouse, so you can hover straight
+   from one thumbnail to the next underneath it. */
+.preview-scrim {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--overlay-h);
-  background: var(--bg);
-  z-index: 99;
-  /* It takes the mouse on purpose. The grid scrolls up behind this panel, so letting the mouse through
-     would hover thumbnails hidden underneath and show photos you cannot see. */
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  background: var(--scrim-tint);
+  -webkit-backdrop-filter: blur(var(--scrim-blur));
+  backdrop-filter: blur(var(--scrim-blur));
+  transition: opacity .2s ease;
 }
+.preview-scrim.visible { opacity: 1; }
 
 /* === GRID ARCHIVE === */
 .archive {
   position: relative;
   z-index: 1;
-  margin-top: var(--overlay-h);
+  margin-top: var(--sink-h);
   padding: 0 32px 120px;
 }
 
@@ -150,26 +196,33 @@ body {
   grid-column: 1;
   grid-row: 1 / span 100;
   position: sticky;
-  top: calc(var(--overlay-h) + 3px);   /* just below the blank zone, which covers anything above it */
+  top: 12px;
   align-self: start;
   z-index: 50;
 }
 .week-row {
   grid-column: 2;
   display: flex;
-  align-items: flex-start;
+  align-items: center;   /* photos sit on the row's middle line, not hung from its top */
   gap: 8px;
   padding: 3px 0;
 }
+/* Opens the week from the top, at the week's writing, rather than at one photo */
 .week-num {
   flex-shrink: 0;
   width: 28px;
+  font: inherit;
   font-size: 11px;
   color: var(--mute);
+  background: none;
+  border: 0;
   text-align: right;
-  padding-top: 2px;
+  padding: 0;
+  cursor: pointer;
   font-variant-numeric: tabular-nums;
+  transition: color .15s;
 }
+.week-num:hover { color: var(--fg); }
 .week-num b { font-weight: inherit; }
 .week-num span { display: none; }   /* the year lives in the sticky label on a desktop; on a phone it joins the week */
 .week-images {
@@ -303,23 +356,17 @@ body {
    rest of the site uses on a phone. There is no preview step and no blank top zone: the zoom runs
    between the thumbnail itself and the photo in the post. */
 @media (max-width: 719px) {
-  .top-overlay { display: none; }
-  .hover-preview { display: none; }
+  .hover-preview, .preview-scrim { display: none; }
 
+  /* No sunken landing on a phone: the grid starts at the top and the scroll-up bar carries the controls */
+  .site-head { display: block; padding: 0; }
   .site-desc {
-    position: static;
     max-width: none;
     padding: 18px 14px 10px;
     font-size: 12.5px;
   }
-
-  /* The years and the theme stay reachable: 61 weeks is a long way back to the top */
   .header-right {
-    position: sticky;
-    top: 0;
-    z-index: 110;
-    background: var(--bg);
-    padding: 9px 14px 10px;
+    padding: 0 14px 10px;
     gap: 16px;
     align-items: center;
     justify-content: space-between;
@@ -328,6 +375,9 @@ body {
   .year-filters button { text-align: left; padding: 4px 0; }
   .theme-toggle { padding: 4px 0; }
 
+  .slimbar { padding: calc(8px + env(safe-area-inset-top)) 14px 8px; }
+  .slimbar .year-filters { gap: 12px; }
+
   .archive { margin-top: 0; padding: 0 10px 72px; }
 
   .year-section { grid-template-columns: 1fr; margin-bottom: 0; }
@@ -335,6 +385,7 @@ body {
 
   .week-row { grid-column: 1; display: block; padding: 0 0 22px; }
   .week-num {
+    display: block;
     width: auto;
     text-align: left;
     padding: 0 0 6px;
@@ -369,5 +420,5 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hover-preview, .post-view, .post-scrim { transition: none; }
+  .hover-preview, .preview-scrim, .post-view, .post-scrim, .slimbar { transition: none; }
 }

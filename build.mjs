@@ -274,7 +274,7 @@ function v3Page(posts) {
   const section = (year) => `  <div class="year-section" data-year="${year}">
     <div class="year-header">${year}</div>
 ${posts.filter((p) => p.year === year).map((p) => `    <div class="week-row">
-      <div class="week-num"><b>${p.week}</b> <span>${p.year}</span></div>
+      <button type="button" class="week-num" data-k="${p.year}-${p.week}" title="Open week ${p.week} from the top"><b>${p.week}</b> <span>${p.year}</span></button>
       <ul class="week-images">
 ${p.images.map((im, i) => `        <li class="grid-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
       </ul>
@@ -286,7 +286,7 @@ ${p.images.map((im, i) => `        <li class="grid-cell"><img src="${p.url}${esc
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${esc(cfg.name)} — V3 preview</title>
+<title>${esc(cfg.name)} — V4 preview</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#000000">
@@ -302,27 +302,39 @@ d.dataset.theme=(t==='light'||t==='dark')?t:sys;})();
 </head>
 <body>
 
-<div class="site-desc">
-  <span class="site-title">${esc(cfg.name)}</span>
-  ${esc(cfg.blurb || 'Twelve images, once a week. No ads. No spam.')}
-</div>
+<header class="site-head">
+  <div class="site-desc">
+    <span class="site-title">${esc(cfg.name)}</span>
+    ${esc(cfg.blurb || 'Twelve images, once a week. No ads. No spam.')}
+  </div>
 
-<div class="header-right">
+  <div class="header-right">
+    <div class="year-filters">
+      <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
+${years.map((y) => `      <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
+    </div>
+    <button type="button" class="theme-toggle">LIGHT</button>
+  </div>
+</header>
+
+<!-- Appears on scroll up, hides on scroll down; TOP glides back to the start. -->
+<div class="slimbar" id="slimbar">
+  <button type="button" class="theme-toggle">LIGHT</button>
+  <button type="button" class="slim-top" id="slimTop">TOP</button>
   <div class="year-filters">
     <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
 ${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
   </div>
-  <button type="button" class="theme-toggle" id="themeToggle">LIGHT</button>
 </div>
 
+<div class="preview-scrim" id="previewScrim"></div>
 <div class="hover-preview" id="hoverPreview"><img id="previewImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""></div>
-<div class="top-overlay"></div>
 
 <div class="archive" id="archive">
 ${years.map(section).join('\n')}
 </div>
 
-<div class="v3-badge">V3 PREVIEW</div>
+<div class="v3-badge">V4 PREVIEW</div>
 
 <div class="post-scrim" id="postScrim"></div>
 <div class="post-view" id="postView" role="dialog" aria-label="Week" aria-hidden="true" tabindex="-1">

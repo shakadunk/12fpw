@@ -1,6 +1,7 @@
-"""V3 preview page (/v3/). Desktop: blank top zone sized to ~1.5 rows, hover preview, click opens the week
-centred on the clicked image. Phones: no blank zone, 4 rows of 3 per week with uncropped ratios, tap to bring
-a photo forward over the blurred grid, tap again to open.   Run after building:  python3 tests/test_v3.py"""
+"""V4 preview page (/v3/). Desktop: a sunken landing sized to ~1.5 rows that scrolls away, a hover preview
+centred on the screen over a frosted grid, click opens the week centred on the clicked image, and the week
+number opens it at the top where the writing is. Phones: no sunken landing, 4 rows of 3 per week with
+uncropped ratios, tap to open.   Run after building:  python3 tests/test_v3.py"""
 import subprocess, time, os, sys
 from playwright.sync_api import sync_playwright
 
@@ -29,29 +30,33 @@ with sync_playwright() as pw:
     g = pg.evaluate("""() => {
       const rows = [...document.querySelectorAll('.week-row')];
       const cells = document.querySelectorAll('.grid-cell img');
-      const ov = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--overlay-h'));
-      const yh = document.querySelector('.year-header').getBoundingClientRect();
+      const arc = document.getElementById('archive').getBoundingClientRect();
       const r0 = rows[0].getBoundingClientRect();
+      const cell0 = rows[0].querySelector('.grid-cell').getBoundingClientRect();
       return {rows: rows.length, cells: cells.length,
               sections: [...document.querySelectorAll('.year-section')].map(s => s.dataset.year),
               perRow: rows.map(r => r.querySelectorAll('.grid-cell').length),
-              overlay: ov, vh: innerHeight, row0Top: r0.top, row0H: r0.height,
-              yearTop: yh.top, overflow: document.documentElement.scrollWidth > innerWidth + 1,
-              topOverlayShown: getComputedStyle(document.querySelector('.top-overlay')).display !== 'none'};
+              archiveTop: arc.top, vh: innerHeight, row0Top: r0.top, row0H: r0.height,
+              rowAlign: getComputedStyle(rows[0]).alignItems,
+              cellMid: cell0.top + cell0.height / 2, rowMid: r0.top + r0.height / 2,
+              headStatic: getComputedStyle(document.querySelector('.site-head')).position,
+              overflow: document.documentElement.scrollWidth > innerWidth + 1};
     }""")
     check("61 week rows", g["rows"] == N, g["rows"])
     check("732 grid cells", g["cells"] == N * 12, g["cells"])
     check("one section per year, newest first", g["sections"] == [str(y) for y in years], g["sections"])
     check("every week has 12 images", set(g["perRow"]) == {12}, set(g["perRow"]))
-    check("blank top zone present", g["topOverlayShown"])
-    hidden = pg.evaluate("""() => {
-      const el = document.elementFromPoint(innerWidth / 2, 120);
-      return !(el && el.closest && el.closest('.grid-cell')); }""")
-    check("the blank zone does not pass the mouse to thumbnails hidden behind it", hidden)
-    visible = g["vh"] - g["overlay"]
-    check("grid zone is about 1.5 rows", 1.2 * g["row0H"] <= visible <= 1.9 * g["row0H"], (visible, g["row0H"]))
-    check("grid zone at most 45% of the screen", visible <= g["vh"] * 0.45 + 2, (visible, g["vh"]))
-    check("year label pinned below the blank zone", g["yearTop"] >= g["overlay"] - 1, (g["yearTop"], g["overlay"]))
+    check("the header is in the flow, so it scrolls away", g["headStatic"] == "static", g["headStatic"])
+    nothing_pinned = pg.evaluate("""() => {
+      // Nothing fixed covers the grid any more: a point in the sunken landing hits the page, not a panel.
+      const el = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      return !el || !el.closest('.top-overlay'); }""")
+    check("no fixed panel over the grid", nothing_pinned)
+    visible = g["vh"] - g["archiveTop"]
+    check("about 1.5 rows show on arrival", 1.2 * g["row0H"] <= visible <= 1.9 * g["row0H"], (visible, g["row0H"]))
+    check("the landing grid is at most 45% of the screen", visible <= g["vh"] * 0.45 + 2, (visible, g["vh"]))
+    check("thumbnails are centred in their row", g["rowAlign"] == "center", g["rowAlign"])
+    check("and sit on the row's middle line", abs(g["cellMid"] - g["rowMid"]) <= 1.5, (g["cellMid"], g["rowMid"]))
     check("no sideways scrolling at 1440", not g["overflow"])
     check("the window is the scroller, not <body>", pg.evaluate("() => document.documentElement.scrollHeight - innerHeight > 100"))
     pg.screenshot(path=os.path.join(shots, "v3-desktop-landing.png"))
@@ -62,12 +67,32 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(600)
     hv = pg.evaluate("""() => {
       const p = document.getElementById('hoverPreview'), i = document.getElementById('previewImg');
+      const s = document.getElementById('previewScrim');
+      const b = i.getBoundingClientRect();
       return {visible: p.classList.contains('visible'), src: i.getAttribute('src'), nw: i.naturalWidth,
-              box: i.getBoundingClientRect().height, overlay: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--overlay-h'))};
+              box: b.height, cx: b.left + b.width / 2, cy: b.top + b.height / 2,
+              vw: innerWidth, vh: innerHeight,
+              scrim: s.classList.contains('visible'),
+              blur: getComputedStyle(s).backdropFilter || getComputedStyle(s).webkitBackdropFilter,
+              passes: getComputedStyle(s).pointerEvents};
     }""")
     check("hover shows the preview", hv["visible"])
     check("preview uses a full-size copy, not the -t thumbnail", hv["src"] and not hv["src"].endswith("-t.jpg"), hv["src"])
-    check("preview sits inside the blank zone", hv["box"] <= hv["overlay"] + 1, (hv["box"], hv["overlay"]))
+    check("the preview is centred on the screen", abs(hv["cx"] - hv["vw"] / 2) <= 1 and abs(hv["cy"] - hv["vh"] / 2) <= 1, (hv["cx"], hv["cy"]))
+    check("the grid behind it is frosted", hv["scrim"] and "blur" in (hv["blur"] or ""), (hv["scrim"], hv["blur"]))
+    check("the frosted layer never takes the mouse", hv["passes"] == "none", hv["passes"])
+    # The whole point of centring: it is in the same place on the landing as deep in the archive.
+    pg.evaluate("window.scrollTo(0, 3000)")
+    pg.wait_for_timeout(400)
+    pg.locator('.grid-cell img').nth(60).hover()
+    pg.wait_for_timeout(500)
+    deep = pg.evaluate("""() => { const b = document.getElementById('previewImg').getBoundingClientRect();
+      return {cx: b.left + b.width / 2, cy: b.top + b.height / 2}; }""")
+    check("and stays in that same place once you have scrolled down", abs(deep["cx"] - hv["cx"]) <= 1 and abs(deep["cy"] - hv["cy"]) <= 1, (deep, hv["cx"], hv["cy"]))
+    pg.evaluate("window.scrollTo(0, 0)")
+    pg.wait_for_timeout(400)
+    first.hover()
+    pg.wait_for_timeout(400)
     pg.screenshot(path=os.path.join(shots, "v3-desktop-hover.png"))
 
     # click image 5 of a week: the post opens with that image centred
@@ -127,7 +152,7 @@ with sync_playwright() as pw:
     check("portrait is tall in the preview (taller than wide)", before["h"] > before["w"], before)
     check("every post image has the same width (portraits and landscapes alike)", after["maxW"] - after["minW"] < 1, after)
     check("that width sits between the preview's height and width (a gentle zoom)", before["boxH"] - 1 <= after["w"] <= before["boxW"] + 1, (before, after))
-    check("and well short of the old full column (816px wide)", after["w"] < 700, after)
+    check("and well short of the old full column (816px wide)", after["w"] < 760, after)
     check("a typical 4:5 portrait still fits on the screen", after["h"] <= before["vh"], (after, before))
     check("no post image wider than the 816px column", after["maxW"] <= 817, after)
     check("post image keeps its true proportions", after["ratioOk"], after)
@@ -193,9 +218,9 @@ with sync_playwright() as pw:
     check("the flying copy is cleaned up", not land["fly"])
     seat = pg.evaluate("""() => {
       const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
-      const b = th.getBoundingClientRect(), ov = document.getElementById('hoverPreview').getBoundingClientRect().bottom;
-      return {ok: b.top >= ov - 1 && b.bottom <= innerHeight + 1, top: Math.round(b.top), ov: Math.round(ov)}; }""")
-    check("that image's own thumbnail is on screen below the blank zone", seat["ok"], seat)
+      const b = th.getBoundingClientRect();
+      return {ok: b.top >= -1 && b.bottom <= innerHeight + 1, top: Math.round(b.top), bottom: Math.round(b.bottom), vh: innerHeight}; }""")
+    check("that image's own thumbnail has been brought on screen", seat["ok"], seat)
     check("the address is back at the archive", land["hash"] in ("", "#"), land["hash"])
     pg.screenshot(path=os.path.join(shots, "v3-desktop-landed-back.png"))
 
@@ -230,8 +255,10 @@ with sync_playwright() as pw:
               visible: document.getElementById('hoverPreview').classList.contains('visible'),
               match: i.src === new URL(d['2023-40'].i[6].u, location.href).href}; }""")
     check("browser Back also zooms out and lands on image 7", not b2["open"] and b2["visible"] and b2["match"], b2)
-    pg.mouse.move(720, 180); pg.wait_for_timeout(350)
-    pg.mouse.move(690, 300); pg.wait_for_timeout(350)
+    # x=16 is the archive's own left padding, outside every cell: the grid fills the screen now, so there
+    # is no empty band at the top to move into any more.
+    pg.mouse.move(16, 180); pg.wait_for_timeout(350)
+    pg.mouse.move(16, 300); pg.wait_for_timeout(350)
     held = pg.evaluate("""() => {
       const d = JSON.parse(document.getElementById('v3data').textContent);
       const i = document.getElementById('previewImg');
@@ -245,7 +272,7 @@ with sync_playwright() as pw:
       const d = JSON.parse(document.getElementById('v3data').textContent);
       return document.getElementById('previewImg').src === new URL(d['2023-40'].i[0].u, location.href).href; }""")
     check("hovering another thumbnail takes the preview back over", sw)
-    pg.mouse.move(690, 300); pg.wait_for_timeout(400)
+    pg.mouse.move(16, 300); pg.wait_for_timeout(400)
     check("after that, leaving a thumbnail hides the preview as usual",
           not pg.evaluate("() => document.getElementById('hoverPreview').classList.contains('visible')"))
 
@@ -261,16 +288,16 @@ with sync_playwright() as pw:
       const cells = [...ul.querySelectorAll('.grid-cell')].map(c => c.getBoundingClientRect());
       const tops = [...new Set(cells.map(c => Math.round(c.top)))];
       const sq = cells.every(c => Math.abs(c.width - c.height) < 1.5);
-      return {topOverlay: getComputedStyle(document.querySelector('.top-overlay')).display,
-              preview: getComputedStyle(document.getElementById('hoverPreview')).display,
+      return {preview: getComputedStyle(document.getElementById('hoverPreview')).display,
+              scrim: getComputedStyle(document.getElementById('previewScrim')).display,
               archiveTop: document.getElementById('archive').getBoundingClientRect().top,
               cols: getComputedStyle(ul).gridTemplateColumns.split(' ').length,
               rows: tops.length, count: cells.length, square: sq,
               label: row.querySelector('.week-num').innerText.replace(/\\s+/g, ' ').trim(),
               yearHeader: getComputedStyle(document.querySelector('.year-header')).display,
               overflow: document.documentElement.scrollWidth > innerWidth + 1}; }""")
-    check("no blank zone on a phone", m["topOverlay"] == "none", m["topOverlay"])
-    check("no preview zone on a phone either", m["preview"] == "none", m["preview"])
+    check("no hover preview on a phone", m["preview"] == "none", m["preview"])
+    check("and no frosted layer either", m["scrim"] == "none", m["scrim"])
     check("grid starts near the top", m["archiveTop"] < 300, m["archiveTop"])
     check("3 across", m["cols"] == 3, m["cols"])
     check("4 rows of 3 per week", m["rows"] == 4 and m["count"] == 12, (m["rows"], m["count"]))
@@ -282,14 +309,23 @@ with sync_playwright() as pw:
           ph.evaluate("() => history.scrollRestoration") == "manual")
     ph.screenshot(path=os.path.join(shots, "v3-phone-landing.png"))
 
-    # the years and the theme stay reachable down a very long page
-    ph.mouse.wheel(0, 4000); ph.wait_for_timeout(600)
+    # the years and the theme stay reachable down a very long page: the header scrolls away and the
+    # scroll-up bar brings them back. Park the pointer off the bar first, or resting on it holds it open.
+    ph.mouse.move(195, 600)
+    ph.mouse.wheel(0, 4000); ph.wait_for_timeout(2000)
+    down = ph.evaluate("() => ({show: document.getElementById('slimbar').classList.contains('show'), scrolled: Math.round(scrollY)})")
+    check("heading down, nothing sits over the photos", not down["show"] and down["scrolled"] > 1000, down)
+    ph.mouse.wheel(0, -600); ph.wait_for_timeout(500)
     bar = ph.evaluate("""() => {
-      const b = document.querySelector('.header-right').getBoundingClientRect();
-      return {top: Math.round(b.top), scrolled: Math.round(scrollY),
-              opaque: getComputedStyle(document.querySelector('.header-right')).backgroundColor}; }""")
-    check("the year filter stays at the top while you scroll", bar["scrolled"] > 1000 and bar["top"] <= 1, bar)
-    check("and is opaque, so photos do not show through", "rgba(0, 0, 0, 0)" != bar["opaque"], bar)
+      const s = document.getElementById('slimbar'), b = s.getBoundingClientRect();
+      return {show: s.classList.contains('show'), top: Math.round(b.top),
+              opaque: getComputedStyle(s).backgroundColor,
+              years: s.querySelectorAll('.year-filters button').length,
+              hasTop: !!s.querySelector('#slimTop')}; }""")
+    check("heading back up brings the controls back", bar["show"] and bar["top"] <= 1, bar)
+    check("and the bar is opaque, so photos do not show through", "rgba(0, 0, 0, 0)" != bar["opaque"], bar)
+    check("it carries every year plus ALL", bar["years"] == len(years) + 1, bar["years"])
+    check("and a way back to the top", bar["hasTop"])
     ph.evaluate("() => scrollTo(0, 0)"); ph.wait_for_timeout(400)
 
     # one tap opens the week at that image: no preview step
@@ -366,9 +402,9 @@ with sync_playwright() as pw:
     far = ph.evaluate("""() => {
       const th = document.querySelector('.grid-cell img[data-k="2023-20"][data-n="7"]');
       const tr = th.getBoundingClientRect();
-      const bar = document.querySelector('.header-right').getBoundingClientRect().bottom;
-      return {centre: tr.top + tr.height / 2, screenCentre: bar + (innerHeight - bar) / 2,
-              onScreen: tr.top >= bar && tr.bottom <= innerHeight,
+      // Nothing is pinned over the grid now, so "centred" means centred on the screen itself.
+      return {centre: tr.top + tr.height / 2, screenCentre: innerHeight / 2,
+              onScreen: tr.top >= 0 && tr.bottom <= innerHeight,
               shown: getComputedStyle(th).visibility === 'visible'}; }""")
     check("a thumbnail that was off screen is centred on return",
           abs(far["centre"] - far["screenCentre"]) < 20 and far["onScreen"] and far["shown"], far)
@@ -438,7 +474,7 @@ with sync_playwright() as pw:
         tp.goto(B + "/v3/", wait_until="load")
         tp.wait_for_timeout(500)
         t = tp.evaluate("""() => ({theme: document.documentElement.dataset.theme,
-          label: document.getElementById('themeToggle').textContent.trim(),
+          label: document.querySelector('.site-head .theme-toggle').textContent.trim(),
           bar: document.querySelector('meta[name=theme-color]').content,
           bg: getComputedStyle(document.body).backgroundColor,
           saved: localStorage.getItem('theme')})""")
@@ -450,7 +486,7 @@ with sync_playwright() as pw:
               t["label"] == ("DARK" if want == "light" else "LIGHT"), t)
 
         # choosing the other one sticks across a reload
-        tp.click("#themeToggle")
+        tp.click(".site-head .theme-toggle")
         tp.wait_for_timeout(200)
         other = "dark" if want == "light" else "light"
         o = tp.evaluate("() => ({theme: document.documentElement.dataset.theme, saved: localStorage.getItem('theme')})")
@@ -461,7 +497,7 @@ with sync_playwright() as pw:
               tp.evaluate("() => document.documentElement.dataset.theme") == other)
 
         # setting it back to what the device is doing goes back to following the device
-        tp.click("#themeToggle")
+        tp.click(".site-head .theme-toggle")
         tp.wait_for_timeout(200)
         b2 = tp.evaluate("() => ({theme: document.documentElement.dataset.theme, saved: localStorage.getItem('theme')})")
         check("setting it back to the device's own mode follows the device again (" + scheme + ")",
@@ -474,7 +510,7 @@ with sync_playwright() as pw:
     tp.emulate_media(color_scheme="light"); tp.wait_for_timeout(400)
     check("the page follows the device when it changes",
           tp.evaluate("() => document.documentElement.dataset.theme") == "light")
-    tp.click("#themeToggle"); tp.wait_for_timeout(200)          # explicitly choose dark
+    tp.click(".site-head .theme-toggle"); tp.wait_for_timeout(200)          # explicitly choose dark
     tp.emulate_media(color_scheme="dark"); tp.wait_for_timeout(400)
     tp.emulate_media(color_scheme="light"); tp.wait_for_timeout(400)
     check("but a chosen theme is not overridden by the device",
@@ -528,9 +564,9 @@ with sync_playwright() as pw:
     gp.goto(B + "/v3/", wait_until="load"); gp.wait_for_timeout(1200)
     gp.add_style_tag(content="*{overflow-anchor:none!important}")
     gp.evaluate("document.querySelectorAll('.week-row')[9].scrollIntoView({block: 'center'})"); gp.wait_for_timeout(500)
-    ROW = """() => { const wide = innerWidth >= 720;
-      const y = (wide ? document.getElementById('hoverPreview').getBoundingClientRect().bottom
-                      : document.querySelector('.header-right').offsetHeight) + 12;
+    # The same line v3.js anchors on (gridProbeY): nothing is pinned over the grid on any width now,
+    # so it is just inside the top of the screen.
+    ROW = """() => { const y = 12;
       const rows = [...document.querySelectorAll('.week-row')];
       for (let i = 0; i < rows.length; i++) { const r = rows[i].getBoundingClientRect();
         if (r.height && r.bottom >= y) return {row: i, f: Math.round((y - r.top) / r.height * 100) / 100,
