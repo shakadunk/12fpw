@@ -351,7 +351,7 @@
   }
   var layoutQueued = false;
   window.addEventListener('resize', function () {
-    if (layoutQueued || !postView.classList.contains('open')) return;
+    if (layoutQueued || resizing || !postView.classList.contains('open')) return;   // skip during zoom — avoids white/black flashing as images rapidly resize
     layoutQueued = true;
     requestAnimationFrame(function () { layoutQueued = false; layoutPost(); });
   });
@@ -407,6 +407,7 @@
   var restoreTimer = null;
   function restorePlace() {
     restoreTimer = null;
+    layoutPost();   // resize images once after zoom settles (skipped during the gesture itself)
     if (anchorPost && postView.classList.contains('open')) {
       var node = postStack.children[anchorPost.i];
       if (node) {
@@ -415,7 +416,7 @@
         postView.scrollTop += (r.top + anchorPost.f * r.height) - cy;
       }
     }
-    if (anchorGrid && !activeFly) {
+    if (anchorGrid && !activeFly && !postView.classList.contains('open')) {   // skip grid scroll while post view covers it — prevents scrollbar jumping
       var row = document.querySelectorAll('.week-row')[anchorGrid.i];
       if (row) {
         var rr = row.getBoundingClientRect();
@@ -478,6 +479,7 @@
     hidePreview();
     if (animate) { void preview.offsetHeight; preview.style.transition = ''; }
     postView.classList.add('open');
+    archive.style.visibility = 'hidden';   // hide the grid so it cannot bleed through during Safari zoom
     postView.setAttribute('aria-hidden', 'false');
     postView.scrollTop = 0;
     currentPost = post;
@@ -568,6 +570,7 @@
       if (!postView.classList.contains('shown')) {
         postView.classList.remove('open', 'leaving');
         postScrim.classList.remove('leaving');
+        archive.style.visibility = '';   // reveal the grid again now the overlay is fully gone
         postStack.textContent = '';
         postTextEl.innerHTML = '';
       }
