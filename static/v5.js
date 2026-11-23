@@ -99,6 +99,7 @@
   var pendingFly = null;   // where the flight starts, set by the click
   var activeFly = null;    // the flying copy while it is in the air
   var closeTimer = 0;
+  var gridHideTimer = 0;   // the grid is only taken out of view once the week has fully covered it
   var guardTimer = 0;
 
   // Where a thumbnail's photo really is. The cell is a square but the photo is shown whole inside it,
@@ -311,7 +312,17 @@
     postScrim.classList.remove('leaving');
     postView.classList.toggle('instant', !animate);
     postView.classList.add('open');
-    archive.style.visibility = 'hidden';   // hide the grid so it cannot bleed through during Safari zoom
+    // The grid stays where it is while the photo flies, so you see it lift off the archive and the scrim
+    // blur the rest away behind it. Taking the grid out of view at this point would leave the photo
+    // crossing a blank page. It is only hidden once the week has fully covered it, which is also the
+    // only time it could show through: Safari's fixed overlay can uncover the page during a pinch-zoom.
+    clearTimeout(gridHideTimer);
+    gridHideTimer = setTimeout(function () {
+      gridHideTimer = 0;
+      if (postView.classList.contains('open') && !postView.classList.contains('leaving')) {
+        archive.style.visibility = 'hidden';
+      }
+    }, animate ? 620 : 0);
     postView.setAttribute('aria-hidden', 'false');
     postView.scrollTop = 0;
     currentPost = post;
@@ -356,6 +367,12 @@
       currentKey = ''; openedFromGrid = false; currentPost = null; currentPostKey = '';
       return;
     }
+
+    // Back in view before anything flies, so the photo has an archive to land on and the week fades off
+    // it rather than off a blank page.
+    clearTimeout(gridHideTimer);
+    gridHideTimer = 0;
+    archive.style.visibility = '';
 
     // Work out the flight home before anything is torn down: the photo you are on, where it is now, and
     // the thumbnail it came from.

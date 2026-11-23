@@ -139,6 +139,10 @@ with sync_playwright() as pw:
     if air:
         check("which begins on the thumbnail it came from",
               abs(air["cx"] - start["cx"]) < 90 and abs(air["cy"] - start["cy"]) < 90, (air, start))
+    # The photo must be seen lifting off the archive. Taking the grid out of view while the copy is in
+    # the air leaves it crossing a blank page, which is what it used to do.
+    check("and the grid is still there underneath it, not blanked out",
+          pg.evaluate("() => getComputedStyle(document.getElementById('archive')).visibility") == "visible")
     pg.wait_for_timeout(1400)
     po = pg.evaluate("""() => { const st = document.getElementById('postStack');
       const b = st.children[6].getBoundingClientRect();
@@ -180,6 +184,10 @@ with sync_playwright() as pw:
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(200)
     check("leaving starts the flight back", pg.evaluate(FLY))
+    # The archive has to be back before the photo starts for home, or the flight crosses a blank page
+    # and the grid only reappears once it has landed.
+    check("and the grid is already back for it to land on",
+          pg.evaluate("() => getComputedStyle(document.getElementById('archive')).visibility") == "visible")
     pg.wait_for_timeout(1500)
     home = pg.evaluate("""() => { const t = document.querySelector('.fg-cell img[data-k="2024-5"][data-n="7"]');
       const b = t.getBoundingClientRect();
