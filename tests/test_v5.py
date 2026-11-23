@@ -87,6 +87,23 @@ with sync_playwright() as pw:
     check("the week number keeps the text colour, not the grey", yr["week"] == yr["text"] and yr["week"] != yr["mute"], yr)
     check("and the year is not repeated on every line", yr["inlineYearHidden"], yr)
 
+    # The space either side of the week number should read as the same gap. Measured on the painted
+    # glyphs, not the boxes, and at both a one-digit and a two-digit week: left-aligning the number
+    # would pile a one-digit week's slack onto the photo side, right-aligning it onto the year side.
+    GAPS = """(wk) => {
+      const lbl = document.querySelector('.fg-label[data-k="' + wk + '"]');
+      const week = lbl.closest('.fg-week');
+      const sticky = week.closest('.fg-year').querySelector('.fg-sticky');
+      const ink = (el) => { const r = document.createRange(); r.selectNodeContents(el);
+                            const b = r.getBoundingClientRect(); r.detach(); return b; };
+      const y = ink(sticky), n = ink(lbl.querySelector('b'));
+      const photos = week.querySelector('.fg-row').getBoundingClientRect();
+      return {afterYear: n.left - y.right, beforePhotos: photos.left - n.right}; }"""
+    for wk in ("2024-9", "2023-52"):
+        gp = pg.evaluate(GAPS, wk)
+        check("week %s sits evenly between the year and the photos" % wk.split("-")[1],
+              abs(gp["afterYear"] - gp["beforePhotos"]) <= 1, gp)
+
     bounds = pg.evaluate("""() => [...document.querySelectorAll('.fg-year')].map(s => {
       const b = s.getBoundingClientRect(); return Math.round(b.top + scrollY); })""")
     pg.evaluate("window.scrollTo(0, %d)" % (bounds[1] - 400)); pg.wait_for_timeout(400)

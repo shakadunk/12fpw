@@ -140,7 +140,8 @@ body {
 @media (min-width: 900px) {
   /* Year, then week, then the photos. The year is one cell spanning its whole section, so it stays put
      while that year's weeks scroll past it and only leaves when the next year's label pushes it off. */
-  .fg-year { display: grid; grid-template-columns: 30px 1fr; gap: 0 12px; }
+  /* The year column is sized to the year itself, so the space after it is exactly the gap. */
+  .fg-year { display: grid; grid-template-columns: auto 1fr; gap: 0 12px; }
   .fg-sticky {
     display: block;
     grid-column: 1;
@@ -155,8 +156,11 @@ body {
     color: var(--mute);   /* the year stays grey; the week numbers keep the text colour */
   }
   .fg-weeks { grid-column: 2; min-width: 0; }
-  .fg-week { display: grid; grid-template-columns: 22px 1fr; gap: 0 12px; align-items: start; padding-bottom: 14px; }
-  .fg-label { padding-top: 2px; margin: 0; }
+  /* Wide enough for two digits, and the number is centred in it. Left-aligned would pile all the slack
+     of a one-digit week onto the photo side; right-aligned would pile it onto the year side. Centred
+     splits it, so the space either side of the week number is the same at 7 as it is at 52. */
+  .fg-week { display: grid; grid-template-columns: 16px 1fr; gap: 0 12px; align-items: start; padding-bottom: 14px; }
+  .fg-label { padding-top: 2px; margin: 0; text-align: center; }
   .fg-yr { display: none; }   /* the year is in the sticky column now, not on every line */
   .fg-row { grid-template-columns: repeat(12, 1fr); gap: 3px; }
 }
