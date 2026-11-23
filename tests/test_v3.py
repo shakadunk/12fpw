@@ -559,6 +559,61 @@ with sync_playwright() as pw:
         "() => getComputedStyle(document.getElementById('hoverPreview')).display") == "none")
     zp.close()
 
+    # ---------------- hovering has to be meant ----------------
+    # The grid fills the screen, so the cursor is nearly always over a photo. Passing through, or merely
+    # scrolling with the cursor parked, must not keep throwing big photos up.
+    hp = br.new_page(viewport={"width": 1440, "height": 900})
+    hp.goto(B + "/v3/", wait_until="load")
+    hp.wait_for_timeout(1500)
+    hp.evaluate("window.scrollTo(0, 2500)")
+    hp.wait_for_timeout(900)
+    CELLS = """() => [...document.querySelectorAll('.grid-cell img')]
+        .map(e => { const b = e.getBoundingClientRect();
+          return {x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2), w: b.width, h: b.height}; })
+        .filter(c => c.y > 150 && c.y < innerHeight - 150 && c.w > 40 && c.h > 40)"""
+    OPEN = "() => document.getElementById('hoverPreview').classList.contains('visible')"
+    SRC = "() => (document.getElementById('previewImg').getAttribute('src') || '').split('/').pop()"
+    cells = hp.evaluate(CELLS)
+
+    for c in cells[:8]:                       # crossing the grid on the way somewhere else
+        hp.mouse.move(c["x"], c["y"]); hp.wait_for_timeout(45)
+    check("passing over thumbnails opens nothing", not hp.evaluate(OPEN))
+
+    a, nxt = cells[5], cells[6]
+    hp.mouse.move(a["x"], a["y"])
+    hp.wait_for_timeout(120)
+    check("and it is still shut part way through the dwell", not hp.evaluate(OPEN))
+    hp.wait_for_timeout(380)
+    check("but resting on one opens it", hp.evaluate(OPEN))
+
+    first_src = hp.evaluate(SRC)
+    hp.mouse.move(nxt["x"], nxt["y"])
+    hp.wait_for_timeout(90)                   # well inside the dwell
+    check("once open, moving to another swaps without waiting",
+          hp.evaluate(OPEN) and hp.evaluate(SRC) != first_src, (first_src, hp.evaluate(SRC)))
+
+    for _ in range(6):                        # the wheel case: the cursor never moves, the photos stream past
+        hp.mouse.wheel(0, 220); hp.wait_for_timeout(60)
+    check("scrolling puts an open photo away", not hp.evaluate(OPEN))
+    hp.wait_for_timeout(700)
+    check("and none comes back while the cursor sits still", not hp.evaluate(OPEN))
+
+    cells = hp.evaluate(CELLS)
+    a = cells[5]
+    hp.mouse.move(a["x"], a["y"]); hp.wait_for_timeout(500)
+    check("moving again after the scroll opens one as usual", hp.evaluate(OPEN))
+    hp.keyboard.press("Escape"); hp.wait_for_timeout(250)
+    check("Escape puts it away", not hp.evaluate(OPEN))
+    hp.mouse.move(a["x"] + 1, a["y"] + 1); hp.wait_for_timeout(500)
+    check("and that one stays shut while the cursor is still on it", not hp.evaluate(OPEN))
+
+    nxt = hp.evaluate(CELLS)[6]
+    hp.mouse.move(nxt["x"], nxt["y"]); hp.wait_for_timeout(500)
+    check("but another thumbnail opens as usual", hp.evaluate(OPEN))
+    hp.mouse.move(8, nxt["y"]); hp.wait_for_timeout(400)
+    check("leaving the grid puts it away", not hp.evaluate(OPEN))
+    hp.close()
+
     # the archive keeps its place too
     gp = br.new_page(viewport={"width": 1440, "height": 800})
     gp.goto(B + "/v3/", wait_until="load"); gp.wait_for_timeout(1200)

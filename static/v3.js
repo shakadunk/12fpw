@@ -134,18 +134,45 @@
   });
 
   // ---------- preview ----------
+  // The grid fills the screen now, so the cursor is almost always over a photo. Showing one the instant
+  // the pointer touches a thumbnail made the page hard to read: big photos kept opening while you were
+  // only passing through, or merely scrolling with the cursor parked. So hovering has to be meant:
+  //   - rest on a thumbnail for DWELL before anything opens (crossing the grid does nothing),
+  //   - once one is open, moving to another swaps at once (you are browsing by then, so be quick),
+  //   - nothing opens while the page is moving, and scrolling puts an open one away,
+  //   - a mouseover with no mouse movement behind it is the grid sliding under a still cursor, not a hover.
+  var DWELL = 260;    // how long the cursor must rest on a thumbnail before its photo opens
+  var LINGER = 140;   // grace on the way out, so crossing the gap between two thumbnails does not flash
+  var QUIET = 200;    // how long after the page stops moving before hovering counts again
+  var dwellTimer = 0, lingerTimer = 0, scrollTimer = 0, scrolling = false;
+  var escapedFrom = null;   // the thumbnail Escape dismissed: it stays shut until the cursor leaves it
+
+  function previewOpen() { return preview.classList.contains('visible'); }
+  // Did the hand move, or did the grid move under a still cursor? mouseover arrives BEFORE the mousemove
+  // that caused it, so lastX/lastY still hold the previous position: a real move lands somewhere else,
+  // while a thumbnail sliding under a parked cursor reports the very same point.
+  function pointerMoved(e) {
+    if (lastX === null) return true;
+    return e.clientX !== lastX || e.clientY !== lastY;
+  }
+  function dimPreview() {   // put it away without touching the hold
+    preview.classList.remove('visible');
+    previewScrim.classList.remove('visible');
+  }
   function showPreview(img) {
     var im = imageOf(img);
     if (!im) return;
+    clearTimeout(lingerTimer); lingerTimer = 0;
     previewImg.src = bigOf(im);
     previewImg.alt = '';
     preview.classList.add('visible');
     previewScrim.classList.add('visible');
   }
   function hidePreview() {
+    clearTimeout(dwellTimer); dwellTimer = 0;
+    clearTimeout(lingerTimer); lingerTimer = 0;
     releaseHold();
-    preview.classList.remove('visible');
-    previewScrim.classList.remove('visible');
+    dimPreview();
   }
 
   function imageOf(img) {
@@ -153,23 +180,61 @@
     return post ? post.i[+img.dataset.n - 1] : null;
   }
 
+  function armDwell(img) {
+    if (dwellTimer || previewOpen() || img === escapedFrom) return;
+    dwellTimer = setTimeout(function () {
+      dwellTimer = 0;
+      if (!scrolling && img !== escapedFrom) showPreview(img);
+    }, DWELL);
+  }
+
   archive.addEventListener('mouseover', function (e) {
     if (!hasZone()) return;
     var img = e.target.closest('.grid-cell img');
     if (!img) return;
+    if (scrolling) return;            // the grid is moving, not the hand
+    if (!pointerMoved(e)) return;     // the page shifted under a parked cursor: not a hover
     if (previewHeld) {
       if (!hoverIsReal(e)) return;   // the stray hover fired when the post disappeared
       releaseHold();                 // a real move onto a thumbnail takes the preview back
+      showPreview(img);
+      return;
     }
-    showPreview(img);
+    clearTimeout(lingerTimer); lingerTimer = 0;
+    if (previewOpen()) { showPreview(img); return; }   // already looking: swap straight away
+    clearTimeout(dwellTimer); dwellTimer = 0;          // a new thumbnail restarts the count
+    armDwell(img);
   });
+
+  // Entering a thumbnail is not the only way to come to rest on one: after a scroll the cursor is already
+  // sitting on a photo, and no mouseover will ever fire for it. A move within the same thumbnail counts too.
+  archive.addEventListener('mousemove', function (e) {
+    if (!hasZone() || scrolling || previewHeld || dwellTimer || previewOpen()) return;
+    if (!pointerMoved(e)) return;
+    var img = e.target.closest('.grid-cell img');
+    if (img) armDwell(img);
+  }, { passive: true });
+
   archive.addEventListener('mouseout', function (e) {
-    if (!hasZone() || previewHeld) return;   // while held, the photo stays up
-    if (e.target.closest('.grid-cell img')) {
-      preview.classList.remove('visible');
-      previewScrim.classList.remove('visible');
-    }
+    if (!hasZone()) return;
+    var left = e.target.closest('.grid-cell img');
+    if (!left) return;
+    if (left === escapedFrom) escapedFrom = null;   // off the one you dismissed: it may open again
+    if (previewHeld) return;                        // while held, the photo stays up
+    clearTimeout(dwellTimer); dwellTimer = 0;       // left before it opened: never mind
+    if (!previewOpen() || lingerTimer) return;
+    lingerTimer = setTimeout(function () { lingerTimer = 0; dimPreview(); }, LINGER);
   });
+
+  // Scrolling means you want to see the grid, so nothing opens while the page moves and anything open
+  // goes away. This also covers the wheel case: the cursor never moves, the photos stream past under it.
+  window.addEventListener('scroll', function () {
+    scrolling = true;
+    clearTimeout(dwellTimer); dwellTimer = 0;
+    if (previewOpen()) hidePreview();
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(function () { scrolling = false; }, QUIET);
+  }, { passive: true });
 
   // ---------- the zoom ----------
   var pendingFly = null;   // where the zoom starts, set by the click
@@ -300,7 +365,7 @@
   var previewHeld = false, movedSinceLanding = false;
   var lastX = null, lastY = null, holdX = null, holdY = null;
   document.addEventListener('mousemove', function (e) {
-    lastX = e.clientX; lastY = e.clientY;
+    lastX = e.clientX; lastY = e.clientY;   // read by pointerMoved on the NEXT mouseover
     if (previewHeld) movedSinceLanding = true;
   }, { passive: true });
 
@@ -637,7 +702,14 @@
   }
   postBack.addEventListener('click', function (e) { e.preventDefault(); leavePost(); });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && postView.classList.contains('open')) leavePost();
+    if (e.key !== 'Escape') return;
+    if (postView.classList.contains('open')) { leavePost(); return; }
+    if (!previewOpen()) return;
+    // A way out of a photo you did not mean to open. Escape means "not this one", so it stays shut until
+    // the cursor moves off that thumbnail; otherwise the next twitch would put it straight back up.
+    var under = (lastX === null) ? null : document.elementFromPoint(lastX, lastY);
+    escapedFrom = (under && under.closest) ? under.closest('.grid-cell img') : null;
+    hidePreview();
   });
 
   // ---------- scroll-up bar ----------
