@@ -326,6 +326,54 @@ with sync_playwright() as pw:
     check("phone: no sideways scrolling at 390", not m["overflow"])
     ph.screenshot(path=os.path.join(shots, "v5-phone-landing.png"))
 
+    # ---------------- phone: the weekly blurb sits open in the grid ----------------
+    bl = ph.evaluate("""() => { const t = document.querySelector('.fg-text[data-k="2024-5"]');
+      const label = document.querySelector('.fg-label[data-k="2024-5"]').getBoundingClientRect();
+      const row = document.querySelector('.fg-row[data-k]') || t.nextElementSibling;
+      return {present: !!t, shown: t && getComputedStyle(t).display !== 'none',
+              hasText: !!(t && t.innerText.trim()),
+              afterLabel: t.getBoundingClientRect().top >= label.bottom - 1,
+              beforeRow: t.getBoundingClientRect().bottom <= row.getBoundingClientRect().top + 1,
+              role: t.getAttribute('role'), tabindex: t.getAttribute('tabindex')}; }""")
+    check("phone: the week's writing is right there in the grid", bl["present"] and bl["shown"] and bl["hasText"], bl)
+    check("phone: sitting between the week number and the photos", bl["afterLabel"] and bl["beforeRow"], bl)
+    check("phone: reachable as a button, by keyboard too", bl["role"] == "button" and bl["tabindex"] == "0", bl)
+
+    ph.locator('.fg-text[data-k="2024-5"]').tap()
+    ph.wait_for_timeout(900)
+    bo = ph.evaluate("""() => ({open: document.getElementById('postView').classList.contains('open'),
+      hash: location.hash, top: Math.round(document.getElementById('postView').scrollTop),
+      text: document.getElementById('postText').innerText.trim().length > 0})""")
+    check("phone: tapping the blurb opens the full week too, from the top", bo["open"] and bo["hash"] == "#2024-w5" and bo["top"] == 0, bo)
+    check("phone: with its own writing right there", bo["text"])
+    ph.locator("#postBack").tap()
+    ph.wait_for_timeout(1600)
+
+    # a link inside the blurb is still just a link — tapping it must not swallow the tap into the post
+    link = ph.locator('.fg-text[data-k="2023-21"] a').first
+    link.scroll_into_view_if_needed(); ph.wait_for_timeout(300)
+    popped = None
+    try:
+        with ph.context.expect_page(timeout=3000) as pop:
+            link.tap()
+        popped = pop.value
+    except Exception:
+        pass
+    ph.wait_for_timeout(300)
+    lp = ph.evaluate("() => document.getElementById('postView').classList.contains('open')")
+    check("phone: except a link in the blurb, which opens for itself", bool(popped) and not lp, {"popup": bool(popped), "postOpen": lp})
+    if popped: popped.close()
+    ph.screenshot(path=os.path.join(shots, "v5-phone-blurb.png"))
+
+    # ---------------- desktop: the dense one-line week has no room for the blurb ----------------
+    dp = br.new_page(viewport={"width": 1440, "height": 900})
+    dp.goto(B + "/v5/", wait_until="load")
+    dp.wait_for_timeout(400)
+    dt = dp.evaluate("""() => { const t = document.querySelector('.fg-text[data-k="2024-5"]');
+      return {present: !!t, hidden: t && getComputedStyle(t).display === 'none'}; }""")
+    check("desktop: the blurb exists but stays out of the one-line week row", dt["present"] and dt["hidden"], dt)
+    dp.close()
+
     # the very same gesture, and the very same flight
     pt = ph.locator('.fg-cell img[data-k="2024-5"][data-n="7"]')
     pt.scroll_into_view_if_needed(); ph.wait_for_timeout(400)

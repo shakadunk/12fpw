@@ -452,6 +452,13 @@
   archive.addEventListener('click', function (e) {
     var num = e.target.closest('.fg-label');
     if (num) { e.preventDefault(); openWeek(num.dataset.k); return; }
+    var txt = e.target.closest('.fg-text');
+    if (txt) {
+      if (e.target.closest('a')) return;   // a link inside the blurb goes to its own page, not into the week
+      e.preventDefault();
+      openWeek(txt.dataset.k);
+      return;
+    }
     var img = e.target.closest('.fg-cell img');
     if (!img) {   // the empty margin around a photo floating in its square counts as the photo
       var cell = e.target.closest('.fg-cell');
@@ -460,6 +467,15 @@
     if (!img) return;
     e.preventDefault();
     openFrom(img);
+  });
+
+  // The blurb is reachable by keyboard too (role="button" tabindex="0"); Enter/Space open it the same way.
+  archive.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var txt = e.target.closest && e.target.closest('.fg-text');
+    if (!txt) return;
+    e.preventDefault();
+    openWeek(txt.dataset.k);
   });
 
   function leavePost() {
