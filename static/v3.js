@@ -134,18 +134,23 @@
   });
 
   // ---------- preview ----------
-  // The grid fills the screen now, so the cursor is almost always over a photo. Showing one the instant
-  // the pointer touches a thumbnail made the page hard to read: big photos kept opening while you were
-  // only passing through, or merely scrolling with the cursor parked. So hovering has to be meant:
-  //   - rest on a thumbnail for DWELL before anything opens (crossing the grid does nothing),
-  //   - once one is open, moving to another swaps at once (you are browsing by then, so be quick),
-  //   - nothing opens while the page is moving, and scrolling puts an open one away,
-  //   - a mouseover with no mouse movement behind it is the grid sliding under a still cursor, not a hover.
-  var DWELL = 260;    // how long the cursor must rest on a thumbnail before its photo opens
-  var LINGER = 140;   // grace on the way out, so crossing the gap between two thumbnails does not flash
+  // The grid fills the screen, so the cursor is nearly always over a photo. Opening one the instant the
+  // pointer touched a thumbnail made the page unreadable, and letting hover keep swapping the open photo
+  // was worse: the thumbnails you would be hovering are the ones underneath the photo you are looking at,
+  // so you would be browsing blind. So the preview is something you commit to.
+  //   Opening  rest on a thumbnail for DWELL, then the photo zooms out of it into the middle of the
+  //            screen, on the same curve the week post uses.
+  //   Open     it holds still. Move the mouse, zoom, pinch: the photo does not change.
+  //   Leaving  click the photo to go into its week at that photo; click the space around it, or press
+  //            Escape, to go back to the grid.
+  // Nothing opens while the page is moving, and a mouseover with no movement behind it is the grid
+  // sliding under a parked cursor, not a hover.
+  var DWELL = 500;    // how long the cursor must rest on a thumbnail before its photo opens
   var QUIET = 200;    // how long after the page stops moving before hovering counts again
-  var dwellTimer = 0, lingerTimer = 0, scrollTimer = 0, scrolling = false;
-  var escapedFrom = null;   // the thumbnail Escape dismissed: it stays shut until the cursor leaves it
+  var dwellTimer = 0, scrollTimer = 0, scrolling = false;
+  var escapedFrom = null;    // the thumbnail you just dismissed: it stays shut until the cursor leaves it
+  var previewThumb = null;   // the thumbnail the open photo came from, so a click knows where to go
+  var previewFlying = false;
 
   function previewOpen() { return preview.classList.contains('visible'); }
   // Did the hand move, or did the grid move under a still cursor? mouseover arrives BEFORE the mousemove
@@ -155,83 +160,100 @@
     if (lastX === null) return true;
     return e.clientX !== lastX || e.clientY !== lastY;
   }
-  function dimPreview() {   // put it away without touching the hold
-    preview.classList.remove('visible');
-    previewScrim.classList.remove('visible');
-  }
-  function showPreview(img) {
-    var im = imageOf(img);
-    if (!im) return;
-    clearTimeout(lingerTimer); lingerTimer = 0;
-    previewImg.src = bigOf(im);
-    previewImg.alt = '';
-    preview.classList.add('visible');
-    previewScrim.classList.add('visible');
-  }
-  function hidePreview() {
-    clearTimeout(dwellTimer); dwellTimer = 0;
-    clearTimeout(lingerTimer); lingerTimer = 0;
-    releaseHold();
-    dimPreview();
-  }
 
   function imageOf(img) {
     var post = data[img.dataset.k];
     return post ? post.i[+img.dataset.n - 1] : null;
   }
 
+  function hidePreview() {
+    clearTimeout(dwellTimer); dwellTimer = 0;
+    if (previewFlying) { previewFlying = false; removeFly(); }
+    previewThumb = null;
+    preview.classList.remove('visible');
+    previewScrim.classList.remove('visible');
+  }
+
+  // Put it away and remember what the cursor is left sitting on, so the next twitch does not reopen it
+  function dismissPreview() {
+    hidePreview();   // first, so the overlay stops taking the mouse and we can see what is underneath
+    var under = (lastX === null) ? null : document.elementFromPoint(lastX, lastY);
+    escapedFrom = (under && under.closest) ? under.closest('.grid-cell img') : null;
+  }
+
+  // The photo lifts out of its thumbnail and grows into the middle of the screen. Same flight, same
+  // curve as opening a week, so the two gestures read as one family.
+  function openPreview(thumb) {
+    var im = imageOf(thumb);
+    if (!im) return;
+    var to = previewRectFor(im);
+    var src = bigOf(im);
+    previewThumb = thumb;
+    previewImg.src = src;
+    previewImg.alt = '';
+    previewScrim.classList.add('visible');
+    if (!to || reduceMotion.matches) { preview.classList.add('visible'); return; }
+    previewFlying = true;
+    flyBetween(thumbPhotoRect(thumb), to, src, null, function () {
+      previewFlying = false;
+      var t = preview.style.transition;
+      preview.style.transition = 'none';   // arrive exactly where the flight ended, with no fade on top
+      preview.classList.add('visible');
+      void preview.offsetHeight;
+      preview.style.transition = t;
+    });
+  }
+
   function armDwell(img) {
-    if (dwellTimer || previewOpen() || img === escapedFrom) return;
+    if (dwellTimer || previewOpen() || previewFlying || img === escapedFrom) return;
     dwellTimer = setTimeout(function () {
       dwellTimer = 0;
-      if (!scrolling && img !== escapedFrom) showPreview(img);
+      if (!scrolling && !previewOpen() && img !== escapedFrom) openPreview(img);
     }, DWELL);
   }
 
   archive.addEventListener('mouseover', function (e) {
-    if (!hasZone()) return;
+    if (!hasZone() || scrolling || previewOpen() || previewFlying) return;
     var img = e.target.closest('.grid-cell img');
     if (!img) return;
-    if (scrolling) return;            // the grid is moving, not the hand
     if (!pointerMoved(e)) return;     // the page shifted under a parked cursor: not a hover
-    if (previewHeld) {
-      if (!hoverIsReal(e)) return;   // the stray hover fired when the post disappeared
-      releaseHold();                 // a real move onto a thumbnail takes the preview back
-      showPreview(img);
-      return;
-    }
-    clearTimeout(lingerTimer); lingerTimer = 0;
-    if (previewOpen()) { showPreview(img); return; }   // already looking: swap straight away
-    clearTimeout(dwellTimer); dwellTimer = 0;          // a new thumbnail restarts the count
+    clearTimeout(dwellTimer); dwellTimer = 0;   // a new thumbnail restarts the count
     armDwell(img);
   });
 
   // Entering a thumbnail is not the only way to come to rest on one: after a scroll the cursor is already
   // sitting on a photo, and no mouseover will ever fire for it. A move within the same thumbnail counts too.
   archive.addEventListener('mousemove', function (e) {
-    if (!hasZone() || scrolling || previewHeld || dwellTimer || previewOpen()) return;
+    if (!hasZone() || scrolling || dwellTimer || previewOpen() || previewFlying) return;
     if (!pointerMoved(e)) return;
     var img = e.target.closest('.grid-cell img');
     if (img) armDwell(img);
   }, { passive: true });
 
   archive.addEventListener('mouseout', function (e) {
-    if (!hasZone()) return;
     var left = e.target.closest('.grid-cell img');
     if (!left) return;
     if (left === escapedFrom) escapedFrom = null;   // off the one you dismissed: it may open again
-    if (previewHeld) return;                        // while held, the photo stays up
     clearTimeout(dwellTimer); dwellTimer = 0;       // left before it opened: never mind
-    if (!previewOpen() || lingerTimer) return;
-    lingerTimer = setTimeout(function () { lingerTimer = 0; dimPreview(); }, LINGER);
   });
 
-  // Scrolling means you want to see the grid, so nothing opens while the page moves and anything open
-  // goes away. This also covers the wheel case: the cursor never moves, the photos stream past under it.
+  // The photo itself opens its week at that photo; the space around it goes back to the grid. Measured
+  // against where the photo is actually drawn, not its box: object-fit leaves bars that are not the photo.
+  preview.addEventListener('click', function (e) {
+    if (!previewOpen()) return;
+    var r = previewPictureRect(), thumb = previewThumb;
+    var onPhoto = r && thumb && e.clientX >= r.left && e.clientX <= r.left + r.width &&
+                               e.clientY >= r.top && e.clientY <= r.top + r.height;
+    if (onPhoto) openFrom(thumb);
+    else dismissPreview();
+  });
+
+  // Nothing opens while the page is moving. This covers the wheel in particular: the cursor never moves,
+  // the photos stream past underneath it. An open photo is left alone — it is yours until you dismiss it,
+  // and taking it away on scroll would also snatch it mid pinch-zoom, which reflows and scrolls the page.
   window.addEventListener('scroll', function () {
     scrolling = true;
     clearTimeout(dwellTimer); dwellTimer = 0;
-    if (previewOpen()) hidePreview();
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(function () { scrolling = false; }, QUIET);
   }, { passive: true });
@@ -280,7 +302,9 @@
 
   function removeFly() {
     if (!activeFly) return;
-    activeFly.target.style.visibility = '';
+    // A flight opening the preview hides nothing: the thumbnail stays in the grid, the photo is a copy
+    // lifting out of it. Only the flights that land ON something have one to put back.
+    if (activeFly.target) activeFly.target.style.visibility = '';
     activeFly.el.remove();
     activeFly = null;
   }
@@ -357,35 +381,11 @@
     window.scrollBy(0, (r.top + r.height / 2) - bottom / 2);
   }
 
-  // After landing, the preview HOLDS that photo: it stays up until the mouse moves onto another thumbnail,
-  // so it never just vanishes. The browser fires a stray hover the moment the post disappears, at the spot
-  // the cursor was already sitting on; a hover counts as real when it arrives somewhere else, or after the
-  // mouse has actually moved. Going by the position rather than the order of events also catches a single
-  // quick flick straight onto another thumbnail.
-  var previewHeld = false, movedSinceLanding = false;
-  var lastX = null, lastY = null, holdX = null, holdY = null;
+  var lastX = null, lastY = null;
   document.addEventListener('mousemove', function (e) {
     lastX = e.clientX; lastY = e.clientY;   // read by pointerMoved on the NEXT mouseover
-    if (previewHeld) movedSinceLanding = true;
   }, { passive: true });
 
-  function holdPreview() { previewHeld = true; movedSinceLanding = false; holdX = lastX; holdY = lastY; }
-  function releaseHold() { previewHeld = false; movedSinceLanding = false; }
-  function hoverIsReal(e) {
-    if (movedSinceLanding || holdX === null) return true;
-    return Math.abs(e.clientX - holdX) > 2 || Math.abs(e.clientY - holdY) > 2;
-  }
-
-  function landOnGrid(ret) {
-    var t = preview.style.transition;
-    preview.style.transition = 'none';          // swap in with no fade, exactly where the flight ended
-    previewImg.src = ret.src;
-    preview.classList.add('visible');
-    previewScrim.classList.add('visible');
-    void preview.offsetHeight;
-    preview.style.transition = t;
-    holdPreview();
-  }
 
   // ---------- post view ----------
   var currentKey = '';
@@ -597,8 +597,11 @@
       return;
     }
 
-    // Work out the flight home before anything is torn down: the photo you are on, where it is now,
-    // and where it belongs in the preview zone.
+    // Work out the flight home before anything is torn down: the photo you are on, where it is now, and
+    // the thumbnail it came from. It always goes back to its own thumbnail, on a mouse as on a phone.
+    // It used to land in the preview zone on a desktop, which made sense while that zone was empty space
+    // at the top; now the preview covers the screen and takes the mouse, so landing there would leave you
+    // behind a photo you have to dismiss, when what you asked for was to come out.
     var ret = null;
     if (currentPost && !reduceMotion.matches) {
       var n = currentPostIndex();
@@ -606,12 +609,9 @@
       var node = postStack.children[n];
       var imgEl = node && (node.tagName === 'IMG' ? node : node.querySelector('img'));
       var thumb = document.querySelector('.grid-cell img[data-k="' + currentPostKey + '"][data-n="' + (n + 1) + '"]');
-      if (imgEl && im) {
+      if (imgEl && im && thumb) {
         ensureThumbVisible(thumb);
-        // With a mouse the photo flies back into the preview zone and waits there. On a phone there is no
-        // preview zone, so it flies back down into its own thumbnail, where it came from.
-        var to = hasZone() ? previewRectFor(im) : (thumb ? thumbPhotoRect(thumb) : null);
-        if (to) ret = { from: imgEl.getBoundingClientRect(), to: to, src: bigOf(im), imgEl: imgEl, thumb: thumb, toPreview: hasZone() };
+        ret = { from: imgEl.getBoundingClientRect(), to: thumbPhotoRect(thumb), src: bigOf(im), imgEl: imgEl, thumb: thumb };
       }
     }
 
@@ -627,15 +627,10 @@
     if (ret) {
       postView.classList.add('leaving');        // unblur and fade at the pace of the flight
       postScrim.classList.add('leaving');
-      if (ret.toPreview) {
-        previewImg.src = ret.src;               // the same file as the post image, so it is already cached
-        flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () { landOnGrid(ret); });
-      } else {
-        if (ret.thumb) ret.thumb.style.visibility = 'hidden';   // the copy lands in its place
-        flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () {
-          if (ret.thumb) ret.thumb.style.visibility = '';
-        }, true);   // pinned to the page, so it stays on its thumbnail whatever the scroll does
-      }
+      ret.thumb.style.visibility = 'hidden';    // the copy lands in its place
+      flyBetween(ret.from, ret.to, ret.src, ret.imgEl, function () {
+        ret.thumb.style.visibility = '';
+      }, true);   // pinned to the page, so it stays on its thumbnail whatever the scroll does
     } else {
       removeFly();
     }
@@ -680,10 +675,10 @@
     route();
   }
 
-  // Desktop: one click opens. Touch: the first tap previews, a tap on the preview opens.
+  // A click straight on a thumbnail opens its week without waiting for the hover to open first.
   archive.addEventListener('click', function (e) {
     var num = e.target.closest('.week-num');
-    if (num) { e.preventDefault(); releaseHold(); openWeek(num.dataset.k); return; }
+    if (num) { e.preventDefault(); hidePreview(); openWeek(num.dataset.k); return; }
     var img = e.target.closest('.grid-cell img');
     if (!img) {   // phone: the empty margin around a floating photo counts as the photo
       var cell = e.target.closest('.grid-cell');
@@ -691,7 +686,6 @@
     }
     if (!img) return;
     e.preventDefault();
-    releaseHold();
     openFrom(img);   // one tap opens the week, on a mouse or a finger
   });
 
@@ -704,12 +698,8 @@
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if (postView.classList.contains('open')) { leavePost(); return; }
-    if (!previewOpen()) return;
-    // A way out of a photo you did not mean to open. Escape means "not this one", so it stays shut until
-    // the cursor moves off that thumbnail; otherwise the next twitch would put it straight back up.
-    var under = (lastX === null) ? null : document.elementFromPoint(lastX, lastY);
-    escapedFrom = (under && under.closest) ? under.closest('.grid-cell img') : null;
-    hidePreview();
+    // The same way out as clicking the space around the photo
+    if (previewOpen()) dismissPreview();
   });
 
   // ---------- scroll-up bar ----------

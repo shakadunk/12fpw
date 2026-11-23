@@ -162,7 +162,10 @@ body {
   justify-content: center;
 }
 .hover-preview img { display: block; width: var(--preview-w); height: var(--preview-h); object-fit: contain; }
-.hover-preview.visible { opacity: 1; }
+/* Open, it takes the mouse. That is the point: the photo holds still while you move around, zoom or pinch,
+   and you leave it on purpose — the photo opens its week, the space around it goes back to the grid. */
+.hover-preview.visible { opacity: 1; pointer-events: auto; cursor: zoom-out; }
+.hover-preview.visible img { cursor: zoom-in; }
 
 /* Frosts the grid behind the preview. The blur is always applied and the whole layer fades, which is far
    smoother than animating backdrop-filter itself. Never takes the mouse, so you can hover straight

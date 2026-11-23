@@ -15,6 +15,13 @@ res = []
 def check(name, cond, extra=""):
     res.append(bool(cond)); print(("PASS " if cond else "FAIL ") + name + (("  " + str(extra)) if extra and not cond else ""))
 
+# Once the preview is up it covers the screen and takes the mouse, so thumbnails are no longer clickable:
+# the way into a week from there is the preview photo itself.
+def click_preview_photo(page):
+    r = page.evaluate("""() => { const b = document.getElementById('previewImg').getBoundingClientRect();
+        return {x: b.left + b.width / 2, y: b.top + b.height / 2}; }""")
+    page.mouse.click(r["x"], r["y"])
+
 slugs = sorted((d for d in os.listdir(os.path.join(proj, "issues")) if d[:4].isdigit()), key=lambda s: (int(s[:4]), int(s.split("-w")[1])), reverse=True)
 N = len(slugs)
 years = sorted({int(s[:4]) for s in slugs}, reverse=True)
@@ -61,10 +68,12 @@ with sync_playwright() as pw:
     check("the window is the scroller, not <body>", pg.evaluate("() => document.documentElement.scrollHeight - innerHeight > 100"))
     pg.screenshot(path=os.path.join(shots, "v3-desktop-landing.png"))
 
-    # hover shows the full-size copy, not the 700px thumbnail
+    # Resting on a thumbnail shows the full-size copy, not the 700px thumbnail. Opening takes the dwell
+    # (500ms) plus the flight out of the thumbnail (550ms), so waits here allow for both.
+    HOVER_MS = 1300
     first = pg.locator(".grid-cell img").first
     first.hover()
-    pg.wait_for_timeout(600)
+    pg.wait_for_timeout(HOVER_MS)
     hv = pg.evaluate("""() => {
       const p = document.getElementById('hoverPreview'), i = document.getElementById('previewImg');
       const s = document.getElementById('previewScrim');
@@ -76,24 +85,26 @@ with sync_playwright() as pw:
               blur: getComputedStyle(s).backdropFilter || getComputedStyle(s).webkitBackdropFilter,
               passes: getComputedStyle(s).pointerEvents};
     }""")
-    check("hover shows the preview", hv["visible"])
+    check("resting on a thumbnail shows the preview", hv["visible"])
     check("preview uses a full-size copy, not the -t thumbnail", hv["src"] and not hv["src"].endswith("-t.jpg"), hv["src"])
     check("the preview is centred on the screen", abs(hv["cx"] - hv["vw"] / 2) <= 1 and abs(hv["cy"] - hv["vh"] / 2) <= 1, (hv["cx"], hv["cy"]))
     check("the grid behind it is frosted", hv["scrim"] and "blur" in (hv["blur"] or ""), (hv["scrim"], hv["blur"]))
     check("the frosted layer never takes the mouse", hv["passes"] == "none", hv["passes"])
     # The whole point of centring: it is in the same place on the landing as deep in the archive.
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(300)
     pg.evaluate("window.scrollTo(0, 3000)")
     pg.wait_for_timeout(400)
     pg.locator('.grid-cell img').nth(60).hover()
-    pg.wait_for_timeout(500)
+    pg.wait_for_timeout(HOVER_MS)
     deep = pg.evaluate("""() => { const b = document.getElementById('previewImg').getBoundingClientRect();
       return {cx: b.left + b.width / 2, cy: b.top + b.height / 2}; }""")
     check("and stays in that same place once you have scrolled down", abs(deep["cx"] - hv["cx"]) <= 1 and abs(deep["cy"] - hv["cy"]) <= 1, (deep, hv["cx"], hv["cy"]))
+    pg.screenshot(path=os.path.join(shots, "v3-desktop-hover.png"))
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(300)
     pg.evaluate("window.scrollTo(0, 0)")
     pg.wait_for_timeout(400)
-    first.hover()
-    pg.wait_for_timeout(400)
-    pg.screenshot(path=os.path.join(shots, "v3-desktop-hover.png"))
 
     # click image 5 of a week: the post opens with that image centred
     row = pg.locator('.week-row:has(.grid-cell img[data-k="2024-5"])')
@@ -133,13 +144,13 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(1000)   # closing is animated now
     portrait = pg.locator('.grid-cell img[data-k="2024-9"][data-n="1"]')
     portrait.hover()
-    pg.wait_for_timeout(500)
+    pg.wait_for_timeout(HOVER_MS)
     before = pg.evaluate("""() => {
       const i = document.getElementById('previewImg'), b = i.getBoundingClientRect();
       const s = Math.min(b.width / i.naturalWidth, b.height / i.naturalHeight);
       return {w: i.naturalWidth * s, h: i.naturalHeight * s, boxW: b.width, boxH: b.height, vh: innerHeight};
     }""")
-    portrait.click()
+    click_preview_photo(pg)   # the preview is up by now, so that is the way in
     pg.wait_for_timeout(1500)
     after = pg.evaluate("""() => {
       const r = document.getElementById('postStack').children[0];
@@ -185,7 +196,9 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(900)
     nl = pg.evaluate("() => [...document.getElementById('postStack').children].filter(c => c.tagName === 'A').length")
     check("all-original week has no image links", nl == 0, nl)
-    # leaving a post: the photo you are on flies back into the preview zone and stays there
+    # Leaving a post: the photo you are on flies back down into its own thumbnail, on a mouse as on a
+    # phone. It used to land in the preview on a desktop, but the preview now covers the screen and takes
+    # the mouse, so coming out of a week would drop you behind a photo you then had to dismiss.
     pg.goto(B + "/v3/", wait_until="load")
     pg.wait_for_timeout(1200)
     t2 = pg.locator('.grid-cell img[data-k="2024-5"][data-n="2"]')
@@ -207,14 +220,14 @@ with sync_playwright() as pw:
     check("the page comes back into focus on the way out", not mid["scrim"])
     pg.wait_for_timeout(1300)
     land = pg.evaluate("""() => {
-      const d = JSON.parse(document.getElementById('v3data').textContent);
-      const i = document.getElementById('previewImg');
+      const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
       return {open: document.getElementById('postView').classList.contains('open'),
               visible: document.getElementById('hoverPreview').classList.contains('visible'),
-              match: i.src === new URL(d['2024-5'].i[9].u, location.href).href, src: i.getAttribute('src'),
+              thumbShown: getComputedStyle(th).visibility === 'visible',
               fly: !!document.querySelector('.post-fly'), hash: location.hash}; }""")
     check("the post is closed afterwards", not land["open"], land)
-    check("it lands back on image 10, enlarged in the preview zone", land["visible"] and land["match"], land)
+    check("it lands back on image 10's own thumbnail", land["thumbShown"], land)
+    check("and leaves no photo covering the grid", not land["visible"], land)
     check("the flying copy is cleaned up", not land["fly"])
     seat = pg.evaluate("""() => {
       const th = document.querySelector('.grid-cell img[data-k="2024-5"][data-n="10"]');
@@ -234,14 +247,16 @@ with sync_playwright() as pw:
     check("a shared link also zooms back out", pg.evaluate("() => !!document.querySelector('.post-fly')"))
     pg.wait_for_timeout(1300)
     dl2 = pg.evaluate("""() => {
-      const d = JSON.parse(document.getElementById('v3data').textContent);
-      const i = document.getElementById('previewImg');
+      const th = document.querySelector('.grid-cell img[data-k="2024-3"][data-n="8"]');
+      const b = th.getBoundingClientRect();
       return {open: document.getElementById('postView').classList.contains('open'),
               visible: document.getElementById('hoverPreview').classList.contains('visible'),
-              match: i.src === new URL(d['2024-3'].i[7].u, location.href).href}; }""")
-    check("and lands on image 8 in the preview zone", not dl2["open"] and dl2["visible"] and dl2["match"], dl2)
+              thumbShown: getComputedStyle(th).visibility === 'visible',
+              onScreen: b.top >= -1 && b.bottom <= innerHeight + 1}; }""")
+    check("and lands on image 8's thumbnail", not dl2["open"] and dl2["thumbShown"] and dl2["onScreen"], dl2)
+    check("with nothing left covering the grid", not dl2["visible"], dl2)
 
-    # the browser Back button does the same, and hovering another thumbnail takes over again
+    # the browser Back button does the same
     t4 = pg.locator('.grid-cell img[data-k="2023-40"][data-n="4"]')
     t4.scroll_into_view_if_needed(); t4.hover(); pg.wait_for_timeout(400); t4.click(); pg.wait_for_timeout(1300)
     pg.evaluate("() => document.getElementById('postStack').children[6].scrollIntoView({block: 'center'})")
@@ -249,32 +264,15 @@ with sync_playwright() as pw:
     pg.go_back()
     pg.wait_for_timeout(1400)
     b2 = pg.evaluate("""() => {
-      const d = JSON.parse(document.getElementById('v3data').textContent);
-      const i = document.getElementById('previewImg');
+      const th = document.querySelector('.grid-cell img[data-k="2023-40"][data-n="7"]');
+      const b = th.getBoundingClientRect();
       return {open: document.getElementById('postView').classList.contains('open'),
               visible: document.getElementById('hoverPreview').classList.contains('visible'),
-              match: i.src === new URL(d['2023-40'].i[6].u, location.href).href}; }""")
-    check("browser Back also zooms out and lands on image 7", not b2["open"] and b2["visible"] and b2["match"], b2)
-    # x=16 is the archive's own left padding, outside every cell: the grid fills the screen now, so there
-    # is no empty band at the top to move into any more.
-    pg.mouse.move(16, 180); pg.wait_for_timeout(350)
-    pg.mouse.move(16, 300); pg.wait_for_timeout(350)
-    held = pg.evaluate("""() => {
-      const d = JSON.parse(document.getElementById('v3data').textContent);
-      const i = document.getElementById('previewImg');
-      return {visible: document.getElementById('hoverPreview').classList.contains('visible'),
-              match: i.src === new URL(d['2023-40'].i[6].u, location.href).href}; }""")
-    check("moving the mouse without hovering a thumbnail leaves it up", held["visible"] and held["match"], held)
-
-    other = pg.locator('.grid-cell img[data-k="2023-40"][data-n="1"]')
-    other.hover(); pg.wait_for_timeout(500)
-    sw = pg.evaluate("""() => {
-      const d = JSON.parse(document.getElementById('v3data').textContent);
-      return document.getElementById('previewImg').src === new URL(d['2023-40'].i[0].u, location.href).href; }""")
-    check("hovering another thumbnail takes the preview back over", sw)
-    pg.mouse.move(16, 300); pg.wait_for_timeout(400)
-    check("after that, leaving a thumbnail hides the preview as usual",
-          not pg.evaluate("() => document.getElementById('hoverPreview').classList.contains('visible')"))
+              thumbShown: getComputedStyle(th).visibility === 'visible',
+              onScreen: b.top >= -1 && b.bottom <= innerHeight + 1}; }""")
+    check("browser Back also zooms out onto image 7's thumbnail",
+          not b2["open"] and b2["thumbShown"] and b2["onScreen"], b2)
+    check("and you are left on the grid, not behind a photo", not b2["visible"], b2)
 
     pg.close()
 
@@ -552,7 +550,7 @@ with sync_playwright() as pw:
               flyTop: f ? parseFloat(f.style.top) - (f.classList.contains('on-page') ? pageYOffset : 0) : null,
               thumbTop: th.top, thumbBottom: th.bottom}; }""")
     check("zoomed past the phone breakpoint, going back starts a flight", aim["fly"], aim)
-    check("and aims inside its own thumbnail, not at the hidden preview zone",
+    check("and aims inside its own thumbnail",
           aim["fly"] and aim["thumbTop"] - 2 <= aim["flyTop"] <= aim["thumbBottom"] + 2, aim)
     zp.wait_for_timeout(1200)
     check("the preview zone stays hidden after landing", zp.evaluate(
@@ -581,37 +579,64 @@ with sync_playwright() as pw:
 
     a, nxt = cells[5], cells[6]
     hp.mouse.move(a["x"], a["y"])
-    hp.wait_for_timeout(120)
+    hp.wait_for_timeout(300)
     check("and it is still shut part way through the dwell", not hp.evaluate(OPEN))
-    hp.wait_for_timeout(380)
-    check("but resting on one opens it", hp.evaluate(OPEN))
+    hp.wait_for_timeout(320)
+    check("the dwell ends in a flight, not a pop", hp.evaluate("() => !!document.querySelector('.post-fly')"))
+    hp.wait_for_timeout(800)
+    check("which lands as the open preview", hp.evaluate(OPEN))
+    check("and tidies the flying copy away", not hp.evaluate("() => !!document.querySelector('.post-fly')"))
 
-    first_src = hp.evaluate(SRC)
-    hp.mouse.move(nxt["x"], nxt["y"])
-    hp.wait_for_timeout(90)                   # well inside the dwell
-    check("once open, moving to another swaps without waiting",
-          hp.evaluate(OPEN) and hp.evaluate(SRC) != first_src, (first_src, hp.evaluate(SRC)))
+    # Open, it is a thing you are looking at, not a thing that follows the mouse. The thumbnails it would
+    # otherwise pick up are the ones lying underneath it, so swapping on hover is browsing blind.
+    held_src = hp.evaluate(SRC)
+    for c in (nxt, cells[8], cells[2]):
+        hp.mouse.move(c["x"], c["y"]); hp.wait_for_timeout(300)
+    check("moving over other thumbnails does not change the photo", hp.evaluate(SRC) == held_src,
+          (held_src, hp.evaluate(SRC)))
+    check("and does not put it away", hp.evaluate(OPEN))
 
-    for _ in range(6):                        # the wheel case: the cursor never moves, the photos stream past
-        hp.mouse.wheel(0, 220); hp.wait_for_timeout(60)
-    check("scrolling puts an open photo away", not hp.evaluate(OPEN))
-    hp.wait_for_timeout(700)
-    check("and none comes back while the cursor sits still", not hp.evaluate(OPEN))
+    for _ in range(5):                        # a zoom reflows and scrolls the page: it must survive that
+        hp.mouse.wheel(0, 200); hp.wait_for_timeout(60)
+    hp.wait_for_timeout(500)
+    check("scrolling leaves it alone too", hp.evaluate(OPEN) and hp.evaluate(SRC) == held_src)
 
-    cells = hp.evaluate(CELLS)
-    a = cells[5]
-    hp.mouse.move(a["x"], a["y"]); hp.wait_for_timeout(500)
-    check("moving again after the scroll opens one as usual", hp.evaluate(OPEN))
-    hp.keyboard.press("Escape"); hp.wait_for_timeout(250)
+    hp.keyboard.press("Escape"); hp.wait_for_timeout(300)
     check("Escape puts it away", not hp.evaluate(OPEN))
-    hp.mouse.move(a["x"] + 1, a["y"] + 1); hp.wait_for_timeout(500)
-    check("and that one stays shut while the cursor is still on it", not hp.evaluate(OPEN))
+    under = hp.evaluate("""() => { const e = document.elementFromPoint(%d, %d);
+        return !!(e && e.closest && e.closest('.grid-cell img')); }""" % (cells[2]["x"], cells[2]["y"]))
+    if under:
+        hp.mouse.move(cells[2]["x"] + 1, cells[2]["y"] + 1); hp.wait_for_timeout(900)
+        check("and that one stays shut while the cursor is still on it", not hp.evaluate(OPEN))
 
-    nxt = hp.evaluate(CELLS)[6]
-    hp.mouse.move(nxt["x"], nxt["y"]); hp.wait_for_timeout(500)
-    check("but another thumbnail opens as usual", hp.evaluate(OPEN))
-    hp.mouse.move(8, nxt["y"]); hp.wait_for_timeout(400)
-    check("leaving the grid puts it away", not hp.evaluate(OPEN))
+    cs2 = hp.evaluate(CELLS)
+    hp.mouse.move(cs2[6]["x"], cs2[6]["y"]); hp.wait_for_timeout(1300)
+    check("another thumbnail opens as usual", hp.evaluate(OPEN))
+
+    # Clicking the photo goes into its week at that photo; clicking beside it goes back to the grid
+    hp.mouse.click(8, 450); hp.wait_for_timeout(400)
+    check("clicking beside the photo returns to the grid", not hp.evaluate(OPEN))
+    check("without opening a week", not hp.evaluate("() => document.getElementById('postView').classList.contains('open')"))
+
+    target = hp.query_selector('.grid-cell img[data-k="2024-5"][data-n="7"]')
+    target.scroll_into_view_if_needed(); hp.wait_for_timeout(500)
+    tb = target.bounding_box()
+    hp.mouse.move(tb["x"] + tb["width"] / 2, tb["y"] + tb["height"] / 2)
+    hp.wait_for_timeout(1300)
+    check("resting on image 7 of a week opens it", hp.evaluate(OPEN))
+    click_preview_photo(hp)
+    hp.wait_for_timeout(150)
+    check("clicking the photo starts the flight into the week",
+          hp.evaluate("() => !!document.querySelector('.post-fly')"))
+    hp.wait_for_timeout(1400)
+    into = hp.evaluate("""() => { const st = document.getElementById('postStack');
+      const b = st.children[6].getBoundingClientRect();
+      return {open: document.getElementById('postView').classList.contains('open'),
+              hash: location.hash, off: Math.round((b.top + b.height / 2) - innerHeight / 2),
+              preview: document.getElementById('hoverPreview').classList.contains('visible')}; }""")
+    check("the week opens at that photo", into["open"] and into["hash"] == "#2024-w5-i7", into)
+    check("with image 7 centred on the screen", abs(into["off"]) < 60, into["off"])
+    check("and the preview is out of the way", not into["preview"], into)
     hp.close()
 
     # the archive keeps its place too
