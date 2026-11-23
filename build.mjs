@@ -353,6 +353,98 @@ ${years.map(section).join('\n')}
 `;
 }
 
+// ---------- V5 landing (hidden preview at /v5/) ----------
+// V2's page, with V3's motion. The archive grid, the header and the scroll-up bar are V2's, down to the
+// measurements; what V3 brought is that a week opens in place, zooming out of the thumbnail you clicked
+// rather than loading a new page. There is no hover step on either a mouse or a finger: the phone's one
+// gesture — touch a photo, go to it — is now the whole interaction, which is what lets the two layouts
+// be one layout at two column counts.
+function v5Page(posts) {
+  const years = [...new Set(posts.map((p) => p.year))].sort((a, b) => b - a);
+  const manifest = {};
+  for (const p of posts) {
+    manifest[`${p.year}-${p.week}`] = {
+      t: p.text ? paragraphs(p.text) : '',
+      i: p.images.map((im) => {
+        const big = (im.l || im.m || im).file;
+        const small = (im.m || im.l || im).file;
+        const e = { u: p.url + big, w: im.w || 0, h: im.h || 0 };
+        if (small !== big) e.s = p.url + small;
+        const href = im.href ? im.href : im.href === false ? null : cfg.siteUrl && p.lens ? lensUrl(cfg.siteUrl + p.url + big) : null;
+        if (href) e.l = href;
+        return e;
+      }),
+    };
+  }
+
+  const week = (p) => `  <div class="fg-week" data-year="${p.year}">
+    <button type="button" class="fg-label" data-k="${p.year}-${p.week}" title="Open week ${p.week} from the top"><b>${p.week}</b> <span>${p.year}</span></button>
+    <ul class="fg-row">
+${p.images.map((im, i) => `      <li class="fg-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
+    </ul>
+  </div>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${esc(cfg.name)} — V5 preview</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/v5.css">
+<script>
+(function(){var d=document.documentElement,t=null;try{t=localStorage.getItem('theme');}catch(e){}
+var sys=window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+d.dataset.theme=(t==='light'||t==='dark')?t:sys;})();
+</script>
+</head>
+<body>
+
+<header class="site-head">
+  <button type="button" class="theme-toggle">LIGHT</button>
+  <span class="site-name"><span class="long">${esc(cfg.name)}</span><span class="short">${esc(cfg.short || cfg.name)}</span></span>
+  <div class="years">
+    <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
+${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
+  </div>
+</header>
+
+<!-- Appears on the way back up, hides on the way down; TOP glides to the start. -->
+<div class="slimbar" id="slimbar">
+  <button type="button" class="theme-toggle">LIGHT</button>
+  <button type="button" class="slim-top" id="slimTop">TOP</button>
+  <div class="years">
+    <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
+${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
+  </div>
+</div>
+
+<main class="fullgrid" id="archive">
+${posts.map(week).join('\n')}
+</main>
+
+<div class="v5-badge">V5 PREVIEW</div>
+
+<div class="post-scrim" id="postScrim"></div>
+<div class="post-view" id="postView" role="dialog" aria-label="Week" aria-hidden="true" tabindex="-1">
+  <button type="button" class="post-back" id="postBack">&larr; ARCHIVE</button>
+  <div class="col">
+    <h1 class="post-head" id="postHead"></h1>
+    <div class="post-text" id="postText" hidden></div>
+    <div class="post-stack" id="postStack"></div>
+  </div>
+</div>
+
+<script type="application/json" id="v5data">${JSON.stringify(manifest).replace(/</g, '\\u003c')}</script>
+<script src="/v5.js" defer></script>
+</body>
+</html>
+`;
+}
+
 function postPage(p, newer, older) {
   const nav = (q, dir) => (q ? `<a href="${q.url}">${dir === 'older' ? '← ' : ''}${esc(weekLabel(q))}, ${q.year}${dir === 'newer' ? ' →' : ''}</a>` : '<span></span>');
   return layout({
@@ -380,6 +472,7 @@ for (const p of posts) { if (seen.has(p.url)) console.warn(`! duplicate post URL
 write('index.html', homePage(posts));
 write('archive/index.html', archivePage(posts));
 write('v3/index.html', v3Page(posts));   // hidden redesign preview; nothing links to it
+write('v5/index.html', v5Page(posts));   // the same, one step further back towards V2
 posts.forEach((p, i) => {
   write(`${p.url.slice(1)}index.html`, postPage(p, posts[i - 1], posts[i + 1]));
   for (const f of fs.readdirSync(p.dir)) {

@@ -1,0 +1,246 @@
+/* V5 (hidden preview at /v5/). Self-contained: this page does not load style.css.
+   V2's page with V3's motion. The header, the scroll-up bar, the archive grid and the reading column are
+   V2's, down to its measurements. What V3 brought is that a week opens in place, zooming out of the
+   thumbnail you clicked. There is no hover step: one gesture, the phone's, at every width. */
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #000; --fg: #fff; --text: #f0f0f0; --mute: #8a8a8a;
+  --line: #333; --ph: #111;
+  --font: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --pad: clamp(16px, 3vw, 40px);   /* V2's page gutter */
+  --ease-open: cubic-bezier(.4, 0, .2, 1);
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #fff; --fg: #000; --text: #111; --mute: #6e6e6e;
+  --line: #d8d8d8; --ph: #eee;
+  color-scheme: light;
+}
+
+html { height: 100%; overflow-x: hidden; }
+body {
+  min-height: 100%;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* === HEADER (V2) === */
+/* In the flow, so it scrolls away and the grid gets the whole screen; the slimbar brings it back. */
+.site-head,
+.slimbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.site-head { padding: var(--pad); }
+.site-name { color: var(--fg); white-space: nowrap; }
+.site-name .short { display: none; }
+
+.theme-toggle, .slim-top, .years button, .fg-label, .post-back {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--mute);
+  transition: color .15s;
+}
+.theme-toggle:hover, .slim-top:hover, .years button:hover, .post-back:hover { color: var(--fg); }
+.years { display: flex; gap: 1.1rem; }
+.years button.active { color: var(--fg); }
+
+/* === SCROLL-UP BAR (V2) === */
+.slimbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  transform: translateY(calc(-100% - 12px));
+  visibility: hidden;
+  transition: transform .2s ease, visibility 0s linear .2s;
+}
+.slimbar.show { transform: translateY(0); visibility: visible; transition: transform .2s ease, visibility 0s; }
+.slimbar .theme-toggle { grid-column: 1; justify-self: start; }
+.slimbar .slim-top { grid-column: 2; justify-self: center; }
+.slimbar .years { grid-column: 3; justify-self: end; }
+
+/* === ARCHIVE GRID (V2's measurements) === */
+/* V2 is 3 across on a phone and 12 across — one whole week to a row — on a desktop, with the week
+   number in the left margin. Kept exactly. The one change: a photo is shown whole inside its square
+   rather than cropped to fill it, which is the treatment the phone layout arrived at. The grid keeps its
+   rhythm and no photo loses its edges, and the zoom can start from the real picture instead of a crop.
+   To go back to V2's cropped contact sheet, this is the only block to change: drop the inset and use
+   object-fit: cover. */
+/* The space between weeks is padding on each week, not a flex gap. Same spacing, but the week boxes
+   then tile the page continuously, with no dead strips between them — which is what lets the zoom
+   anchor always find the week you are looking at instead of landing in a gap and picking a neighbour. */
+.fullgrid { display: flex; flex-direction: column; padding: 0 var(--pad) 72px; }
+.fg-week { padding-bottom: 22px; }
+.fg-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+.fg-label b { font-weight: 500; color: var(--text); }
+.fg-label:hover b { color: var(--fg); }
+.fg-row { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.fg-cell { position: relative; aspect-ratio: 1 / 1; cursor: pointer; }
+.fg-cell img {
+  position: absolute;
+  inset: 5%;
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  background: transparent;
+  transition: opacity .2s;
+}
+@media (min-width: 900px) {
+  .fg-week { display: grid; grid-template-columns: 34px 1fr; gap: 0 14px; align-items: start; padding-bottom: 14px; }
+  .fg-label { padding-top: 2px; margin: 0; }
+  .fg-label b, .fg-label span { display: block; }
+  .fg-row { grid-template-columns: repeat(12, 1fr); gap: 3px; }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  .fg-cell:hover img { opacity: .82; }   /* V2's hover: a touch of feedback, nothing that opens */
+}
+
+/* === POST VIEW: V2's reading column, opened in place === */
+.post-view {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.post-view.open { display: block; }
+.post-view.shown { opacity: 1; transition: opacity .3s var(--ease-open) .25s; }
+.post-view.instant, .post-view.instant.shown { transition: none; }
+/* Leaving is paced to the flight (.55s), so the grid is uncovered just as the photo lands back on it */
+.post-view.leaving { pointer-events: none; transition: opacity .5s var(--ease-open); }
+.post-scrim.leaving { transition: opacity .5s var(--ease-open), backdrop-filter .5s var(--ease-open), -webkit-backdrop-filter .5s var(--ease-open); }
+.post-view:focus { outline: none; }
+
+.post-back {
+  position: fixed;
+  top: var(--pad);
+  left: var(--pad);
+  z-index: 310;
+  font-size: 12px;
+  background: var(--bg);
+  padding: 2px 6px 2px 0;
+}
+
+.col { max-width: 680px; margin: 0 auto; padding: 96px 20px 50vh; }   /* V2's reading column */
+.post-head {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fg);
+  margin-bottom: 28px;
+}
+.post-head .post-year { color: var(--mute); }
+.post-text {
+  margin: 28px 0 40px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.post-text p + p { margin-top: 1em; }
+.post-text .preface { font-style: italic; }
+.post-text a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* V2 again: every photo is the width of the column, its height following its own proportions. The
+   width/height attributes hold the space before it loads, so nothing jumps and no script sizes anything. */
+.post-stack { display: flex; flex-direction: column; gap: 1.4rem; }
+.post-stack img { display: block; width: 100%; height: auto; background: var(--ph); }
+.post-stack a { display: block; }
+.post-stack.guard a { pointer-events: none; }   /* a stray second tap must not fire the image's link */
+
+.post-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 290;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition: opacity .25s ease, backdrop-filter .25s ease, -webkit-backdrop-filter .25s ease;
+}
+.post-scrim.fx {
+  opacity: 1;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: opacity .5s var(--ease-open), backdrop-filter .5s var(--ease-open), -webkit-backdrop-filter .5s var(--ease-open);
+}
+
+/* The flying copy: starts on the thumbnail and lands on the photo in the post, and back again */
+.post-fly {
+  position: fixed;   /* .on-page pins it to the document instead: see flyBetween */
+  z-index: 400;
+  display: block;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.post-fly.on-page { position: absolute; }
+
+.v5-badge {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 200;
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--mute);
+  background: var(--bg);
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  opacity: .45;
+  pointer-events: none;
+}
+
+@media (max-width: 719px) {
+  .site-name .long { display: none; }
+  .site-name .short { display: inline; }
+  .site-head { padding: 14px var(--pad); }
+  .years { gap: .9rem; }
+  .col { padding: 56px 14px 40vh; }
+  .post-stack { gap: 14px; }
+  .post-back { top: 10px; left: 8px; padding: 10px 14px 10px 10px; }   /* a thumb-sized target */
+  .v5-badge { bottom: 10px; left: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-view, .post-scrim, .slimbar { transition: none; }
+}
