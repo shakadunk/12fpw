@@ -324,7 +324,25 @@ with sync_playwright() as pw:
     check("phone: each week carries its week and year", m["label"] == "9 2024", m["label"])
     check("phone: the title shortens", m["name"] == "12FPW", m["name"])
     check("phone: no sideways scrolling at 390", not m["overflow"])
+    cl = ph.evaluate("""() => { const w = document.querySelectorAll('.fg-week')[1], prev = document.querySelectorAll('.fg-week')[0];
+      const l = w.querySelector('.fg-label'), b = l.querySelector('b'), r = document.createRange();
+      r.setStart(b, 0); r.setEndAfter(l.querySelector('.fg-yr')); const ink = r.getBoundingClientRect();
+      const lb = l.getBoundingClientRect(), above = prev.querySelector('.fg-row').getBoundingClientRect().bottom;
+      const next = (w.querySelector('.fg-text') || w.querySelector('.fg-row')).getBoundingClientRect().top;
+      return {off: Math.abs((ink.left + ink.width / 2) - innerWidth / 2), above: lb.top - above, below: next - lb.bottom}; }""")
+    check("phone: the week and year are centred across the screen", cl["off"] <= 2, cl)
+    check("phone: and centred between the week before and its own", abs(cl["above"] - cl["below"]) <= 1, cl)
     ph.screenshot(path=os.path.join(shots, "v5-phone-landing.png"))
+    ph.mouse.wheel(0, 1500); ph.wait_for_timeout(500)
+    ph.evaluate("() => scrollBy(0, -200)"); ph.wait_for_timeout(600)
+    pb = ph.evaluate("""() => { const bar = document.getElementById('slimbar'), b = bar.getBoundingClientRect();
+      const t = bar.querySelector('.slim-top').getBoundingClientRect(), ps = getComputedStyle(bar, '::before');
+      return {shown: bar.classList.contains('show'), above: t.top - b.top, below: b.bottom - t.bottom,
+              fade: -parseFloat(ps.bottom), mask: ps.webkitMaskImage || ps.maskImage}; }""")
+    check("phone: the frosted bar is as solid under its words as above them", pb["shown"] and abs(pb["above"] - pb["below"]) <= 1, pb)
+    check("phone: then feathers out over a long eased run below the bar", pb["fade"] >= 30 and pb["mask"].count("rgba") >= 3, pb)
+    ph.screenshot(path=os.path.join(shots, "v5-phone-bar.png"))
+    ph.evaluate("() => scrollTo(0, 0)"); ph.wait_for_timeout(600)
 
     # ---------------- phone: the weekly blurb sits open in the grid ----------------
     bl = ph.evaluate("""() => { const t = document.querySelector('.fg-text[data-k="2024-5"]');

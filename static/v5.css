@@ -113,16 +113,17 @@ body {
    then tile the page continuously, with no dead strips between them — which is what lets the zoom
    anchor always find the week you are looking at instead of landing in a gap and picking a neighbour. */
 .fullgrid { display: flex; flex-direction: column; padding: 0 var(--pad) 72px; }
-.fg-week { padding-bottom: 22px; }
+.fg-week { padding-bottom: 16px; }
 .fg-sticky { display: none; }   /* no room for a year column on a phone; the week carries its year */
 .fg-label {
   display: block;
-  margin: 0 0 6px;
+  width: 100%;
+  margin: 0 0 16px;   /* the same as the space above it, so the week number sits centred between two weeks */
   font-size: 11px;
   line-height: 1.2;
   letter-spacing: .06em;
   text-transform: uppercase;
-  text-align: left;
+  text-align: center;
 }
 .fg-label b { font-weight: 500; color: var(--text); }
 .fg-label:hover b { color: var(--fg); }
@@ -284,6 +285,22 @@ body {
   border-radius: 3px;
   opacity: .45;
   pointer-events: none;
+}
+
+/* Phone: the frosted band was the size of its text, so its fade began halfway through the words and
+   left a hard edge across them. Here it carries as much solid blur under the words as there is above
+   them, then feathers out over a longer, eased run below the bar, so there is no visible line. */
+@media (max-width: 899px) {
+  .slimbar { transform: translateY(calc(-100% - 44px)); }
+  .slimbar::before {
+    bottom: -36px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px),
+      rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
+      rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px),
+      rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
+      rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
+  }
 }
 
 @media (max-width: 719px) {
