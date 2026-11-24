@@ -385,11 +385,22 @@ function v5Page(posts) {
   // writing at the top there. On a phone it reads as part of the grid and is itself a tap target: either
   // one opens the same place the week number does, the full week from the top.
   const week = (p) => `      <div class="fg-week" data-year="${p.year}">
-        <button type="button" class="fg-label" data-k="${p.year}-${p.week}" aria-label="Open week ${p.week}, ${p.year}, from the top"><b>${p.week}</b> <span class="fg-yr">${p.year}</span></button>
+        <button type="button" class="fg-label" data-k="${p.year}-${p.week}" aria-label="Open week ${p.week}, ${p.year}, from the top"><b><span class="fg-wk">Week </span>${p.week}</b> <span class="fg-yr">${p.year}</span></button>
 ${p.text ? `        <div class="fg-text" data-k="${p.year}-${p.week}" role="button" tabindex="0" aria-label="Open week ${p.week}, ${p.year}, from the top">\n${paragraphs(p.text)}\n        </div>\n` : ''}        <ul class="fg-row">
-${p.images.map((im, i) => `          <li class="fg-cell"><img src="${p.url}${esc(im.thumb || im.file)}" alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
+${p.images.map((im, i) => `          <li class="fg-cell"><img ${gridSrc(p, im)} alt="${esc(`Image ${i + 1}, ${weekLabel(p)} ${p.year}`)}"${dims(im.tw || im.w, im.th || im.h)} loading="lazy" decoding="async" data-k="${p.year}-${p.week}" data-n="${i + 1}"></li>`).join('\n')}
         </ul>
       </div>`;
+
+  // The grid draws each photo inside a square about 110px across on a desktop and 120px on a phone. Drawing
+  // the 700px thumbnails that small meant the browser shrank a screenful of large photos every time the
+  // grid came back into view, which froze the flight home from a week for most of its length. The grid's
+  // own copies are sized to the cell (see scripts/gridthumbs.mjs). They are described by their long side,
+  // because that is the side that spans the cell, so the browser picks the copy that matches the cell.
+  const gridSrc = (p, im) => {
+    if (!im.g) return `src="${p.url}${esc(im.thumb || im.file)}"`;
+    const long = (c) => Math.max(c.w, c.h);
+    return `src="${p.url}${esc(im.g.file)}" srcset="${p.url}${esc(im.g.file)} ${long(im.g)}w, ${p.url}${esc(im.g2.file)} ${long(im.g2)}w" sizes="(min-width: 900px) calc((100vw - 150px) / 12), calc((100vw - 40px) / 3)"`;
+  };
 
   const yearBlock = (y) => `  <section class="fg-year" data-year="${y}">
     <div class="fg-sticky" aria-hidden="true">${y}</div>

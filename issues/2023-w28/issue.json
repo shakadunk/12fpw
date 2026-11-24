@@ -15,6 +15,16 @@
       "m": {
         "file": "01-m.jpg",
         "w": 1194
+      },
+      "g": {
+        "file": "01-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "01-g2.jpg",
+        "w": 480,
+        "h": 479
       }
     },
     {
@@ -29,6 +39,16 @@
       "m": {
         "file": "02-m.jpg",
         "w": 1200
+      },
+      "g": {
+        "file": "02-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "02-g2.jpg",
+        "w": 480,
+        "h": 480
       }
     },
     {
@@ -39,7 +59,17 @@
       "tw": 700,
       "th": 700,
       "alt": "",
-      "href": "https://youtu.be/sRnPGI9SYwE?t=309"
+      "href": "https://youtu.be/sRnPGI9SYwE?t=309",
+      "g": {
+        "file": "03-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "03-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "04.jpg",
@@ -49,7 +79,17 @@
       "tw": 700,
       "th": 700,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=lXP8B2osm_c"
+      "href": "https://www.youtube.com/watch?v=lXP8B2osm_c",
+      "g": {
+        "file": "04-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "04-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "05.jpg",
@@ -59,7 +99,17 @@
       "tw": 640,
       "th": 640,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=BvlJ3keIJdw"
+      "href": "https://www.youtube.com/watch?v=BvlJ3keIJdw",
+      "g": {
+        "file": "05-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "05-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "06.jpg",
@@ -69,7 +119,17 @@
       "tw": 700,
       "th": 700,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=F2cF9o7FuU4"
+      "href": "https://www.youtube.com/watch?v=F2cF9o7FuU4",
+      "g": {
+        "file": "06-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "06-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "07.jpg",
@@ -79,7 +139,17 @@
       "tw": 599,
       "th": 585,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=ogYC-8hs870"
+      "href": "https://www.youtube.com/watch?v=ogYC-8hs870",
+      "g": {
+        "file": "07-g.jpg",
+        "w": 240,
+        "h": 234
+      },
+      "g2": {
+        "file": "07-g2.jpg",
+        "w": 480,
+        "h": 469
+      }
     },
     {
       "file": "08.jpg",
@@ -89,7 +159,17 @@
       "tw": 700,
       "th": 700,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=nB5FS6c7218"
+      "href": "https://www.youtube.com/watch?v=nB5FS6c7218",
+      "g": {
+        "file": "08-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "08-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "09.jpg",
@@ -99,7 +179,17 @@
       "tw": 500,
       "th": 500,
       "alt": "",
-      "href": "https://youtu.be/TO7Urj_2MU0"
+      "href": "https://youtu.be/TO7Urj_2MU0",
+      "g": {
+        "file": "09-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "09-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "10.jpg",
@@ -109,7 +199,17 @@
       "tw": 600,
       "th": 594,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=_OuA1qh6ofo"
+      "href": "https://www.youtube.com/watch?v=_OuA1qh6ofo",
+      "g": {
+        "file": "10-g.jpg",
+        "w": 240,
+        "h": 238
+      },
+      "g2": {
+        "file": "10-g2.jpg",
+        "w": 480,
+        "h": 475
+      }
     },
     {
       "file": "11.jpg",
@@ -119,7 +219,17 @@
       "tw": 700,
       "th": 700,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=KUqbPIoq-wo"
+      "href": "https://www.youtube.com/watch?v=KUqbPIoq-wo",
+      "g": {
+        "file": "11-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "11-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     },
     {
       "file": "12.jpg",
@@ -129,7 +239,17 @@
       "tw": 600,
       "th": 600,
       "alt": "",
-      "href": "https://www.youtube.com/watch?v=IqYgNiZdfh4"
+      "href": "https://www.youtube.com/watch?v=IqYgNiZdfh4",
+      "g": {
+        "file": "12-g.jpg",
+        "w": 240,
+        "h": 240
+      },
+      "g2": {
+        "file": "12-g2.jpg",
+        "w": 480,
+        "h": 480
+      }
     }
   ]
 }

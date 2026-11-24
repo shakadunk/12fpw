@@ -175,6 +175,7 @@ body {
   .fg-week { display: grid; grid-template-columns: 16px 1fr; gap: 0 12px; align-items: start; padding-bottom: 14px; }
   .fg-label { padding-top: 2px; margin: 0; text-align: center; }
   .fg-yr { display: none; }   /* the year is in the sticky column now, not on every line */
+  .fg-wk { display: none; }   /* "Week" spelled out is for the phone; the desktop's narrow column holds the number */
   .fg-text { display: none; }   /* a dense one-line-per-week row has no room for it; tapping a photo already opens the writing */
   .fg-row { grid-template-columns: repeat(12, 1fr); gap: 3px; }
 }

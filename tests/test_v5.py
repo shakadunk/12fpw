@@ -129,9 +129,13 @@ with sync_playwright() as pw:
     th.scroll_into_view_if_needed(); pg.wait_for_timeout(400)
     start = pg.evaluate("""() => { const b = document.querySelector('.fg-cell img[data-k="2024-5"][data-n="7"]').getBoundingClientRect();
       return {w: b.width, cx: b.left + b.width / 2, cy: b.top + b.height / 2}; }""")
-    th.click()
-    pg.wait_for_timeout(140)
-    air = pg.evaluate("""() => { const f = document.querySelector('.post-fly');
+    gs = pg.evaluate("""() => { const t = document.querySelector('.fg-cell img[data-k="2024-5"][data-n="7"]');
+      return {src: t.currentSrc, w: t.naturalWidth, h: t.naturalHeight}; }""")
+    check("the grid draws its own small copies, not the 700px thumbnails",
+          gs["src"].endswith("-g.jpg") and max(gs["w"], gs["h"]) <= 240, gs)
+    # measured in the very frame it is launched, before it has travelled: where it starts, not how fast
+    air = pg.evaluate("""() => { document.querySelector('.fg-cell img[data-k="2024-5"][data-n="7"]').click();
+      const f = document.querySelector('.post-fly');
       if (!f) return null;
       const b = f.getBoundingClientRect();
       return {w: b.width, cx: b.left + b.width / 2, cy: b.top + b.height / 2}; }""")
@@ -143,7 +147,10 @@ with sync_playwright() as pw:
     # the air leaves it crossing a blank page, which is what it used to do.
     check("and the grid is still there underneath it, not blanked out",
           pg.evaluate("() => getComputedStyle(document.getElementById('archive')).visibility") == "visible")
-    pg.wait_for_timeout(1400)
+    pg.wait_for_timeout(200)
+    sw = pg.evaluate("() => { const f = document.querySelector('.post-fly'); return f ? f.getAttribute('src') : null; }")
+    check("mid-flight the small copy has given way to the full-size photo", sw is not None and "-g." not in sw, sw)
+    pg.wait_for_timeout(1200)
     po = pg.evaluate("""() => { const st = document.getElementById('postStack');
       const b = st.children[6].getBoundingClientRect();
       const ws = [...st.querySelectorAll('img')].map(i => Math.round(i.getBoundingClientRect().width));
@@ -319,9 +326,14 @@ with sync_playwright() as pw:
               name: document.querySelector('.site-name').innerText.trim(),
               overflow: document.documentElement.scrollWidth > innerWidth + 1}; }""")
     check("phone: 3 across (V2)", m["cols"] == 3, m["cols"])
+    p3 = br.new_page(viewport={"width": 390, "height": 844}, device_scale_factor=3, has_touch=True, is_mobile=True)
+    p3.goto(B + "/v5/", wait_until="load"); p3.wait_for_timeout(800)
+    pgs = p3.evaluate("() => document.querySelector('.fg-cell img').currentSrc")
+    check("phone: at an iPhone's 3x the grid draws the 480px copies", pgs.endswith("-g2.jpg"), pgs)
+    p3.close()
     check("phone: V2's 2px gap", m["gap"].startswith("2px"), m["gap"])
     check("phone: square cells, photos still shown whole", m["square"] and m["fit"] == "contain", m)
-    check("phone: each week carries its week and year", m["label"] == "9 2024", m["label"])
+    check("phone: each week reads Week, number, year", m["label"].upper() == "WEEK 9 2024", m["label"])
     check("phone: the title shortens", m["name"] == "12FPW", m["name"])
     check("phone: no sideways scrolling at 390", not m["overflow"])
     cl = ph.evaluate("""() => { const w = document.querySelectorAll('.fg-week')[1], prev = document.querySelectorAll('.fg-week')[0];

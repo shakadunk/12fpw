@@ -158,8 +158,18 @@
     setTimeout(fin, 800);
   }
 
+  // The flight starts from the grid's small copy, which is already on screen, so it can leave at once. The
+  // full-size photo it is growing into is swapped in as soon as it is decoded, so the photo is sharp for
+  // most of the way rather than a 240px copy stretched across the column.
   function flyIn(fly, target) {
     flyBetween(fly.rect, target.getBoundingClientRect(), fly.src, target);
+    var el = activeFly && activeFly.el, big = target.currentSrc || target.src;
+    if (!el || !big || big === fly.src) return;
+    var pre = new Image();
+    pre.src = big;
+    (pre.decode ? pre.decode() : Promise.reject()).then(function () {
+      if (activeFly && activeFly.el === el) el.src = big;
+    }, function () {});
   }
 
   // Which photo you are on: the one whose centre is nearest the centre of the screen.

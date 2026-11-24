@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 import { makeVariants } from './variants.mjs';
+import { makeGridThumbs } from './gridthumbs.mjs';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // failOn none: a slightly damaged file (e.g. a JPEG missing its last few bytes) still gets a thumbnail; browsers display such files fine
@@ -91,7 +92,8 @@ for (const [i, f] of files.entries()) {
     .resize({ width: 700, withoutEnlargement: true })
     .jpeg({ quality: 78, mozjpeg: true }).toFile(path.join(dest, `${n}-t.jpg`));
   const v = await makeVariants(dest, { file, w, h }, n);
-  images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, ...(v.m ? { m: v.m } : {}), ...(v.l ? { l: v.l } : {}), alt: '', ...(customLinks[i] === '-' ? { href: false } : customLinks[i] ? { href: customLinks[i] } : {}) });
+  const g = await makeGridThumbs(dest, { file }, n);   // the V5 grid's small copies
+  images.push({ file, w, h, thumb: `${n}-t.jpg`, tw: thumb.width, th: thumb.height, ...(v.m ? { m: v.m } : {}), ...(v.l ? { l: v.l } : {}), ...g, alt: '', ...(customLinks[i] === '-' ? { href: false } : customLinks[i] ? { href: customLinks[i] } : {}) });
 }
 
 fs.writeFileSync(path.join(dest, 'issue.json'), JSON.stringify({ year, week, hero, ...(date ? { date } : {}), ...(flag('no-lens') ? { lens: false } : {}), images }, null, 2) + '\n');
