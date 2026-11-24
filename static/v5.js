@@ -255,7 +255,13 @@
     resizing = false;
     rememberPlace();
   }
+  // Only a change of width is a zoom. On a phone the browser's toolbar shrinks and grows as you scroll,
+  // which fires resize with only the height changed; nothing reflows then, and treating it as a zoom froze
+  // the place mid-scroll and pulled the page back to it 150ms later, a visible jump against your finger.
+  var lastWidth = window.innerWidth;
   window.addEventListener('resize', function () {
+    if (window.innerWidth === lastWidth) return;
+    lastWidth = window.innerWidth;
     resizing = true;
     if (restoreTimer) clearTimeout(restoreTimer);
     restoreTimer = setTimeout(restorePlace, 150);

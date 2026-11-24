@@ -342,6 +342,14 @@ with sync_playwright() as pw:
     check("phone: the frosted bar is as solid under its words as above them", pb["shown"] and abs(pb["above"] - pb["below"]) <= 1, pb)
     check("phone: then feathers out over a long eased run below the bar", pb["fade"] >= 30 and pb["mask"].count("rgba") >= 3, pb)
     ph.screenshot(path=os.path.join(shots, "v5-phone-bar.png"))
+    # the toolbar collapsing mid-scroll changes only the height: it must not pull the page back
+    ph.evaluate("() => scrollTo(0, 2000)"); ph.wait_for_timeout(300)
+    ph.set_viewport_size({"width": 390, "height": 900})
+    ph.evaluate("() => scrollTo(0, 2600)")
+    ph.wait_for_timeout(500)
+    ty = ph.evaluate("() => pageYOffset")
+    check("phone: the toolbar hiding mid-scroll does not yank the page back", abs(ty - 2600) <= 1, ty)
+    ph.set_viewport_size({"width": 390, "height": 844}); ph.wait_for_timeout(300)
     ph.evaluate("() => scrollTo(0, 0)"); ph.wait_for_timeout(600)
 
     # ---------------- phone: the weekly blurb sits open in the grid ----------------
