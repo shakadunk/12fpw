@@ -313,6 +313,12 @@ with sync_playwright() as pw:
     check("frosted, not a flat panel", "blur" in (bar["blur"] or "") and bar["tint"] != "rgba(0, 0, 0, 0)", bar)
     check("and feathered out along the bottom instead of ruled off",
           "gradient" in (bar["feather"] or "") and bar["flat"] == "0px", bar)
+    db = sp.evaluate("""() => { const bar = document.getElementById('slimbar'), b = bar.getBoundingClientRect();
+      const t = bar.querySelector('.slim-top').getBoundingClientRect(), ps = getComputedStyle(bar, '::before');
+      return {above: t.top - b.top, below: b.bottom - t.bottom, fade: -parseFloat(ps.bottom),
+              mask: ps.webkitMaskImage || ps.maskImage}; }""")
+    check("desktop: as solid under its words as above them", abs(db["above"] - db["below"]) <= 1, db)
+    check("desktop: then feathers out over a long eased run below the bar", db["fade"] >= 30 and db["mask"].count("rgba") >= 3, db)
     check("carrying every year plus ALL", bar["years"] == len(years) + 1, bar["years"])
     sp.click("#slimTop")
     sp.wait_for_timeout(2200)

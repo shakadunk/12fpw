@@ -79,24 +79,31 @@ body {
   grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
   padding: calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
-  transform: translateY(calc(-100% - 12px));
+  transform: translateY(calc(-100% - 44px));   /* clear of the screen, feather and all, when hidden */
   visibility: hidden;
   transition: transform .2s ease, visibility 0s linear .2s;
 }
 .slimbar.show { transform: translateY(0); visibility: visible; transition: transform .2s ease, visibility 0s; }
 /* V2's frosted band rather than a flat panel with a rule under it: blur and a light tint, feathered out
-   along the bottom so it fades into the photos instead of cutting a line across them. */
+   along the bottom so it fades into the photos instead of cutting a line across them. The band used to be
+   the size of its text, so the fade began halfway through the words and left a hard edge across them.
+   It now stays solid as far below the words as above them, then feathers out over a longer, eased run
+   that hangs below the bar, so there is no visible line. */
 .slimbar::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 -36px;
   z-index: -1;
   pointer-events: none;
   background: var(--bar-tint);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 20px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px),
+    rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
+    rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px),
+    rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
+    rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
 }
 .slimbar .theme-toggle { grid-column: 1; justify-self: start; }
 .slimbar .slim-top { grid-column: 2; justify-self: center; }
@@ -293,22 +300,6 @@ body {
   border-radius: 3px;
   opacity: .45;
   pointer-events: none;
-}
-
-/* Phone: the frosted band was the size of its text, so its fade began halfway through the words and
-   left a hard edge across them. Here it carries as much solid blur under the words as there is above
-   them, then feathers out over a longer, eased run below the bar, so there is no visible line. */
-@media (max-width: 899px) {
-  .slimbar { transform: translateY(calc(-100% - 44px)); }
-  .slimbar::before {
-    bottom: -36px;
-    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px),
-      rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
-      rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px),
-      rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
-      rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
-  }
 }
 
 @media (max-width: 719px) {
