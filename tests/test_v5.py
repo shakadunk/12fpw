@@ -175,7 +175,17 @@ with sync_playwright() as pw:
     check("V2's column is about 640px of content", 600 <= po["col"] <= 680, po["col"])
     check("and each keeps its own proportions", po["ratioOk"])
     check("photos carry the reverse-image link", "lens.google.com" in (po["href"] or "") and po["target"] == "_blank", po["href"])
-    check("the grid is hidden while the week covers it", po["gridHidden"] == "hidden", po["gridHidden"])
+    # Kept drawn under the week: hiding it let Safari drop its pixels, and the flight home then froze
+    # redrawing them. Only a pinch or Smart Zoom hides it, since Safari's overlay can slip during one.
+    check("the grid stays drawn under the week, ready for the flight home", po["gridHidden"] != "hidden", po["gridHidden"])
+    VIS = "() => getComputedStyle(document.getElementById('archive')).visibility"
+    pg.evaluate("() => window.dispatchEvent(new Event('gesturestart'))")
+    check("a pinch-zoom in the week takes the grid out of view at once", pg.evaluate(VIS) == "hidden")
+    pg.evaluate("() => window.dispatchEvent(new Event('gestureend'))")
+    pg.wait_for_timeout(100)
+    check("and keeps it out until the zoom has settled", pg.evaluate(VIS) == "hidden")
+    pg.wait_for_timeout(400)
+    check("then puts it back once the page is at 100% again", pg.evaluate(VIS) == "visible")
     check("the flying copy is tidied away", not po["fly"])
     # The week ends where its photos end: a margin after the last one, not half a screen of nothing
     tail = pg.evaluate("""() => { const v = document.getElementById('postView'), st = document.getElementById('postStack');

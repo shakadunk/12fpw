@@ -99,7 +99,7 @@
   var pendingFly = null;   // where the flight starts, set by the click
   var activeFly = null;    // the flying copy while it is in the air
   var closeTimer = 0;
-  var gridHideTimer = 0;   // the grid is only taken out of view once the week has fully covered it
+  var gridHideTimer = 0;   // pending return of the grid once a zoom has settled back to 100%
   var guardTimer = 0;
 
   // Where a thumbnail's photo really is. The cell is a square but the photo is shown whole inside it,
@@ -284,6 +284,30 @@
   var currentPost = null;
   var currentPostKey = '';
 
+  // Hide the grid under an open week only while the page is zoomed in (pinch, or Smart Zoom on a trackpad),
+  // and bring it back a moment after the zoom has settled at 100%, so the very end of a zoom-out cannot
+  // uncover it either. Safari starts a trackpad pinch with gesturestart, before the viewport reports any
+  // change, so that hides it at once.
+  var vv = window.visualViewport;
+  function zoomedIn() { return !!vv && vv.scale > 1.01; }
+  function weekCovers() { return postView.classList.contains('open') && !postView.classList.contains('leaving'); }
+  function syncGridForZoom(gesture) {
+    if (!weekCovers()) return;
+    if (gesture || zoomedIn()) {
+      clearTimeout(gridHideTimer);
+      gridHideTimer = 0;
+      archive.style.visibility = 'hidden';
+    } else if (archive.style.visibility === 'hidden' && !gridHideTimer) {
+      gridHideTimer = setTimeout(function () {
+        gridHideTimer = 0;
+        if (!zoomedIn()) archive.style.visibility = '';
+      }, 300);
+    }
+  }
+  if (vv) vv.addEventListener('resize', function () { syncGridForZoom(false); });
+  window.addEventListener('gesturestart', function () { syncGridForZoom(true); });
+  window.addEventListener('gestureend', function () { syncGridForZoom(false); });
+
   function showPost(year, week, imageNum) {
     var fly = pendingFly;
     pendingFly = null;
@@ -328,17 +352,12 @@
     postScrim.classList.remove('leaving');
     postView.classList.toggle('instant', !animate);
     postView.classList.add('open');
-    // The grid stays where it is while the photo flies, so you see it lift off the archive and the scrim
-    // blur the rest away behind it. Taking the grid out of view at this point would leave the photo
-    // crossing a blank page. It is only hidden once the week has fully covered it, which is also the
-    // only time it could show through: Safari's fixed overlay can uncover the page during a pinch-zoom.
-    clearTimeout(gridHideTimer);
-    gridHideTimer = setTimeout(function () {
-      gridHideTimer = 0;
-      if (postView.classList.contains('open') && !postView.classList.contains('leaving')) {
-        archive.style.visibility = 'hidden';
-      }
-    }, animate ? 620 : 0);
+    // The grid stays in view under the week, drawn and ready. Hiding it once the week covered it made Safari
+    // let go of its drawn pixels after a few seconds, so the flight home had to redraw the whole grid in its
+    // first frame and froze for most of its length (the longer you had spent in the week, the likelier).
+    // It is only hidden while the page is pinch- or Smart-Zoomed, the one time it could show through:
+    // Safari's fixed overlay can slip off the page during that zoom. See syncGridForZoom.
+    syncGridForZoom();
     postView.setAttribute('aria-hidden', 'false');
     postView.scrollTop = 0;
     currentPost = post;
