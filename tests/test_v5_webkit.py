@@ -17,10 +17,12 @@ res = []
 def check(name, cond, extra=""):
     res.append(bool(cond)); print(("PASS " if cond else "FAIL ") + name + (("  " + str(extra)) if extra and not cond else ""))
 
-# Longest gap between painted frames from the moment ARCHIVE is clicked
+# Longest gap between painted frames from the moment ARCHIVE is clicked, and how many frames the flight got
 TRACE = """() => new Promise(res => {
   const ts = []; let n = 0;
-  const step = (t) => { ts.push(t); if (++n < 60) requestAnimationFrame(step); else res(Math.round(Math.max(...ts.slice(1).map((x, i) => x - ts[i])))); };
+  const step = (t) => { ts.push(t); if (++n < 60) requestAnimationFrame(step); else res({
+    worst: Math.round(Math.max(...ts.slice(1).map((x, i) => x - ts[i]))),
+    frames: ts.filter(x => x - ts[0] <= 650).length }); };
   requestAnimationFrame(step);
   setTimeout(() => document.getElementById('postBack').click(), 0);
 })"""
@@ -41,8 +43,12 @@ try:
             pg.mouse.wheel(0, 900); pg.wait_for_timeout(900)   # scrolled down the week, as in the report
             stalls.append(pg.evaluate(TRACE))
             pg.wait_for_timeout(1200)
-        med = sorted(stalls)[len(stalls) // 2]
+        med = sorted(x["worst"] for x in stalls)[len(stalls) // 2]
         check("WebKit: the flight home starts without a freeze (median longest frame %dms)" % med, med < 500, stalls)
+        # and it is drawn all the way, not a few frames stretched over the whole flight: animating the
+        # blur's strength on the way out held it to 2-12 frames; fading a held blur gives ~20
+        fr = sorted(x["frames"] for x in stalls)[len(stalls) // 2]
+        check("WebKit: and stays smooth the whole way home (median %d frames in its first 650ms)" % fr, fr >= 15, stalls)
         landed = pg.evaluate("() => !document.querySelector('.post-fly') && !document.getElementById('postView').classList.contains('open')")
         check("WebKit: and it lands, leaving nothing behind", landed)
         check("WebKit: no page errors", not errs, errs[:3])

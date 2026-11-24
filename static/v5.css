@@ -201,7 +201,14 @@ body {
 .post-view.instant, .post-view.instant.shown { transition: none; }
 /* Leaving is paced to the flight (.55s), so the grid is uncovered just as the photo lands back on it */
 .post-view.leaving { pointer-events: none; transition: opacity .5s var(--ease-open); }
-.post-scrim.leaving { transition: opacity .5s var(--ease-open), backdrop-filter .5s var(--ease-open), -webkit-backdrop-filter .5s var(--ease-open); }
+/* On the way home the blur holds at full strength and only fades out. Animating its radius meant
+   re-blurring the whole screen at a new strength every frame, which held the flight home to a handful
+   of frames; a fading blur reads the same, the grid coming into focus as the week lifts off it. */
+.post-scrim.leaving {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: opacity .5s var(--ease-open);
+}
 .post-view:focus { outline: none; }
 
 .post-back {
@@ -252,7 +259,7 @@ body {
   pointer-events: none;
   -webkit-backdrop-filter: blur(0px);
   backdrop-filter: blur(0px);
-  transition: opacity .25s ease, backdrop-filter .25s ease, -webkit-backdrop-filter .25s ease;
+  transition: opacity .25s ease;   /* the blur itself changes only while invisible, so it never animates here */
 }
 .post-scrim.fx {
   opacity: 1;

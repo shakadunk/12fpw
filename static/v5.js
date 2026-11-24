@@ -422,6 +422,7 @@
         ret.thumb.style.visibility = '';
       }, true);   // pinned to the page, so it stays on its thumbnail whatever the scroll does
     } else {
+      postScrim.classList.add('leaving');   // fade the blur out rather than snap it off
       removeFly();
     }
 
