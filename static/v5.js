@@ -404,7 +404,30 @@
     return true;
   }
 
+  // Photos of the week still on their way in are paused as soon as you start to leave it, so none of them
+  // arrives and gets drawn into the week while it follows your finger or fades off under the flight home.
+  // Those already on screen keep loading. Settling back into the week resumes the rest.
+  function quietWeek() {
+    var imgs = postStack.querySelectorAll('img'), h = window.innerHeight;
+    for (var i = 0; i < imgs.length; i++) {
+      var im = imgs[i];
+      if (im.complete || !im.getAttribute('src')) continue;
+      var r = im.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < h) continue;   // on screen: let it finish
+      im.removeAttribute('src');                 // cancels the download
+      im.setAttribute('data-held', '');
+    }
+  }
+  function resumeWeek() {
+    var held = postStack.querySelectorAll('img[data-held]');
+    for (var i = 0; i < held.length; i++) {
+      held[i].removeAttribute('data-held');
+      held[i].src = held[i].dataset.src;
+    }
+  }
+
   function closePostView() {
+    quietWeek();
     if (postView.classList.contains('leaving')) return;   // already flying home; a second call would cancel it
     if (!postView.classList.contains('open')) {
       removeFly();
@@ -554,6 +577,7 @@
     postScrim.style.opacity = '';
   }
   function settleSwipe() {
+    resumeWeek();
     postView.style.transition = 'transform .25s var(--ease-open)';
     postView.style.transform = '';
     postScrim.style.transition = 'opacity .25s var(--ease-open)';
@@ -570,7 +594,10 @@
     if (!swipe) return;
     e.preventDefault();
     var t = e.touches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
-    if (!swipe.mode && Math.abs(dx) + Math.abs(dy) > 8) swipe.mode = Math.abs(dx) >= Math.abs(dy) ? 'back' : 'scroll';
+    if (!swipe.mode && Math.abs(dx) + Math.abs(dy) > 8) {
+      swipe.mode = Math.abs(dx) >= Math.abs(dy) ? 'back' : 'scroll';
+      if (swipe.mode === 'back') quietWeek();
+    }
     if (swipe.mode === 'back') {
       swipe.dx = Math.max(0, dx);
       postView.style.transition = 'none';
