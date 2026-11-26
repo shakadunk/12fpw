@@ -419,6 +419,52 @@ with sync_playwright() as pw:
     if popped: popped.close()
     ph.screenshot(path=os.path.join(shots, "v5-phone-blurb.png"))
 
+    # ---------------- phone: swiping back from the left edge runs the flight home ----------------
+    # Safari's own swipe-back slid a screenshot over the page, hiding the flight or starting it late.
+    # The page cancels the touch that starts at the edge (iOS 13.4+) and runs the swipe itself.
+    cdp = ph.context.new_cdp_session(ph)
+    def touch(kind, x=None, y=None):
+        cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": x, "y": y}]})
+    def drag(x0, y0, x1, y1, steps=12):
+        touch("touchStart", x0, y0)
+        for i in range(1, steps + 1):
+            touch("touchMove", x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps); ph.wait_for_timeout(16)
+        touch("touchEnd")
+    PV = """() => { const v = document.getElementById('postView');
+      return {hash: location.hash, open: v.classList.contains('open'), fly: !!document.querySelector('.post-fly'),
+              shift: v.style.transform, top: Math.round(v.scrollTop)}; }"""
+    ph.evaluate("() => scrollTo(0, 0)"); ph.wait_for_timeout(300)
+    ph.evaluate("() => document.addEventListener('touchstart', e => { window.__edgeHeld = e.defaultPrevented }, {passive: true})")
+    ph.locator('.fg-cell img[data-k="2024-9"][data-n="5"]').tap(); ph.wait_for_timeout(1300)
+    touch("touchStart", 6, 420)
+    held = ph.evaluate("() => window.__edgeHeld")
+    ph.wait_for_timeout(300)   # a slow, hesitant drag: not far and not a flick
+    touch("touchMove", 90, 424); ph.wait_for_timeout(30)
+    mid = ph.evaluate(PV)
+    check("phone: a touch at the left edge of a week is kept from Safari's own swipe-back", held is True, held)
+    check("phone: and the week follows the finger", mid["shift"] == "translateX(84px)", mid)
+    sc = ph.evaluate("() => +getComputedStyle(document.getElementById('postScrim')).opacity")
+    check("phone: while the blurred grid starts to show through behind it", 0.4 < sc < 0.95, sc)
+    touch("touchEnd"); ph.wait_for_timeout(400)
+    sb = ph.evaluate(PV)
+    check("phone: a short swipe lets the week settle back", sb["open"] and sb["hash"] == "#2024-w9-i5" and sb["shift"] == "", sb)
+    check("phone: covering the grid again", ph.evaluate("() => getComputedStyle(document.getElementById('postScrim')).opacity") == "1")
+    drag(6, 650, 8, 350); ph.wait_for_timeout(150)
+    vs = ph.evaluate(PV)
+    check("phone: an up-and-down drag from the edge still scrolls the week", vs["top"] - sb["top"] >= 250 and vs["open"], {"before": sb["top"], "after": vs})
+    drag(6, 420, 250, 430); ph.wait_for_timeout(120)
+    gone = ph.evaluate(PV)
+    # and a quick flick goes too, even a short one, as it does in Safari
+    check("phone: a full swipe leaves the week, with the photo flying home", gone["hash"] == "" and gone["fly"], gone)
+    check("phone: from where the finger let the week go", gone["shift"].startswith("translateX(2"), gone)
+    ph.wait_for_timeout(1100)
+    home = ph.evaluate(PV)
+    check("phone: and lands, the week gone and nothing left behind", not home["open"] and not home["fly"] and home["shift"] == "", home)
+    ph.locator('.fg-cell img[data-k="2024-9"][data-n="5"]').tap(); ph.wait_for_timeout(1300)
+    bb = ph.evaluate("() => { const r = document.getElementById('postBack').getBoundingClientRect(); return {l: r.left, y: (r.top + r.bottom) / 2}; }")
+    touch("touchStart", 12, bb["y"]); touch("touchEnd"); ph.wait_for_timeout(1300)
+    check("phone: tapping ← ARCHIVE, which sits in that edge strip, still works", not ph.evaluate(PV)["open"], bb)
+
     # ---------------- desktop: the dense one-line week has no room for the blurb ----------------
     dp = br.new_page(viewport={"width": 1440, "height": 900})
     dp.goto(B + "/v5/", wait_until="load")

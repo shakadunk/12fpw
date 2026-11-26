@@ -348,6 +348,8 @@
 
     var animate = !!fly && !reduceMotion.matches;
     clearTimeout(closeTimer);
+    postView.style.transform = '';
+    postView.style.transition = '';
     postView.classList.remove('leaving');
     postScrim.classList.remove('leaving');
     postView.classList.toggle('instant', !animate);
@@ -449,6 +451,7 @@
     closeTimer = setTimeout(function () {
       if (!postView.classList.contains('shown')) {
         postView.classList.remove('open', 'leaving');
+        postView.style.transform = '';   // a swipe home leaves the week where the finger let go
         postScrim.classList.remove('leaving');
         archive.style.visibility = '';   // reveal the grid again now the overlay is fully gone
         postStack.textContent = '';
@@ -522,6 +525,79 @@
   postBack.addEventListener('click', function (e) { e.preventDefault(); leavePost(); });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && postView.classList.contains('open')) leavePost();
+  });
+
+  // ---------- swiping back from the left edge (phones) ----------
+  // Safari's own swipe-back slides a screenshot of the grid over the page and only says the page went back
+  // once the finger lifts, so the flight home played hidden behind that screenshot, or late on top of it.
+  // Since iOS 13.4 a page may stop that swipe by cancelling the touch that starts it at the screen's edge.
+  // While a week is open this page does exactly that and runs the swipe itself: the week follows the finger,
+  // and letting go far or fast enough leaves the way the Back button does, the photo flying home from where
+  // it is. The strip is narrow, and a tap or an up-and-down drag that starts in it still works as before.
+  var EDGE = 24, swipe = null;
+  function weekShown() { return postView.classList.contains('shown') && !postView.classList.contains('leaving'); }
+  // As the week is dragged aside, the backdrop thins so the blurred grid shows through, which is where the
+  // photo is about to land; letting go carries on from there into the same fade as the Back button.
+  function revealGrid(dx) {
+    postScrim.style.transition = 'none';
+    postScrim.style.opacity = String(1 - 0.6 * Math.min(1, dx / window.innerWidth));
+  }
+  function releaseGrid() {
+    postScrim.style.transition = '';
+    postScrim.style.opacity = '';
+  }
+  function settleSwipe() {
+    postView.style.transition = 'transform .25s var(--ease-open)';
+    postView.style.transform = '';
+    postScrim.style.transition = 'opacity .25s var(--ease-open)';
+    postScrim.style.opacity = '';
+    setTimeout(function () { if (!swipe) { postView.style.transition = ''; postScrim.style.transition = ''; } }, 260);
+  }
+  postView.addEventListener('touchstart', function (e) {
+    if (!weekShown() || e.touches.length !== 1 || e.touches[0].clientX > EDGE) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    swipe = { x: t.clientX, y: t.clientY, ly: t.clientY, at: Date.now(), mode: '', dx: 0 };
+  }, { passive: false });
+  postView.addEventListener('touchmove', function (e) {
+    if (!swipe) return;
+    e.preventDefault();
+    var t = e.touches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+    if (!swipe.mode && Math.abs(dx) + Math.abs(dy) > 8) swipe.mode = Math.abs(dx) >= Math.abs(dy) ? 'back' : 'scroll';
+    if (swipe.mode === 'back') {
+      swipe.dx = Math.max(0, dx);
+      postView.style.transition = 'none';
+      postView.style.transform = 'translateX(' + swipe.dx + 'px)';
+      revealGrid(swipe.dx);
+    } else if (swipe.mode === 'scroll') {
+      postView.scrollTop -= t.clientY - swipe.ly;   // the touch was taken from the browser, so scroll it here
+    }
+    swipe.ly = t.clientY;
+  }, { passive: false });
+  postView.addEventListener('touchend', function (e) {
+    var sw = swipe;
+    swipe = null;
+    if (!sw) return;
+    e.preventDefault();
+    if (!sw.mode) {   // a tap: cancelling the touch also cancelled its click, so pass it on
+      var el = document.elementFromPoint(sw.x, sw.y);
+      if (el) el.click();
+      return;
+    }
+    if (sw.mode !== 'back') return;
+    var speed = sw.dx / Math.max(1, Date.now() - sw.at);   // px per ms
+    if (sw.dx > window.innerWidth * 0.3 || (sw.dx > 40 && speed > 0.45)) {
+      postView.style.transition = '';   // hand the fade back to the stylesheet; the week stays where the finger left it
+      releaseGrid();                    // the backdrop fades on from where the drag left it
+      leavePost();
+    } else {
+      settleSwipe();
+    }
+  }, { passive: false });
+  postView.addEventListener('touchcancel', function () {
+    if (!swipe) return;
+    swipe = null;
+    settleSwipe();
   });
 
   // ---------- scroll-up bar ----------
