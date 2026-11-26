@@ -324,15 +324,21 @@
     postTextEl.innerHTML = post.t || '';
     postTextEl.hidden = !post.t;
 
+    // The whole week loads at once and at high priority, none of it left waiting for you to scroll near it,
+    // so the week is all there by the time you move through it. The requests go out nearest-first from the
+    // photo you tapped, so that one still starts ahead of the rest.
     postStack.textContent = '';
+    var focus = imageNum ? imageNum - 1 : 0, order = [];
     post.i.forEach(function (im, i) {
       var img = document.createElement('img');
-      img.src = bigOf(im);
+      img.dataset.src = bigOf(im);
+      img.fetchPriority = 'high';
+      order.push({ img: img, d: Math.abs(i - focus) });
       // Its own proportions, so the column holds the right space before the file arrives and nothing
       // jumps. The width comes from the CSS column; no script sizes anything.
       if (im.w && im.h) { img.width = im.w; img.height = im.h; }
       img.alt = 'Image ' + (i + 1) + ' of ' + post.i.length + ', Week ' + (+week) + ' ' + year;
-      img.loading = i < 2 ? 'eager' : 'lazy';
+      img.loading = 'eager';
       img.decoding = 'async';
       var node = img;
       if (im.l) {   // reverse-image search, or the week's own link
@@ -345,6 +351,7 @@
       }
       postStack.appendChild(node);
     });
+    order.sort(function (x, y) { return x.d - y.d; }).forEach(function (o) { o.img.src = o.img.dataset.src; });
 
     var animate = !!fly && !reduceMotion.matches;
     clearTimeout(closeTimer);

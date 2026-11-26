@@ -133,6 +133,11 @@ with sync_playwright() as pw:
       return {src: t.currentSrc, w: t.naturalWidth, h: t.naturalHeight}; }""")
     check("the grid draws its own small copies, not the 700px thumbnails",
           gs["src"].endswith("-g.jpg") and max(gs["w"], gs["h"]) <= 240, gs)
+    asked = []
+    def note(r):
+        u = r.url
+        if "/2024/week-5/" in u and "-g" not in u.rsplit("/", 1)[1]: asked.append(u.rsplit("/", 1)[1].split("-")[0].split(".")[0])
+    pg.on("request", note)
     # measured in the very frame it is launched, before it has travelled: where it starts, not how fast
     air = pg.evaluate("""() => { document.querySelector('.fg-cell img[data-k="2024-5"][data-n="7"]').click();
       const f = document.querySelector('.post-fly');
@@ -150,6 +155,11 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(200)
     sw = pg.evaluate("() => { const f = document.querySelector('.post-fly'); return f ? f.getAttribute('src') : null; }")
     check("mid-flight the small copy has given way to the full-size photo", sw is not None and "-g." not in sw, sw)
+    pr = pg.evaluate("() => [...document.querySelectorAll('#postStack img')].map(i => i.fetchPriority + '/' + i.loading)")
+    dist = [abs(int(x) - 7) for x in asked]
+    check("the whole week is asked for at once, at high priority, none left for later",
+          len(set(asked)) == 12 and set(pr) == {"high/eager"}, {"asked": asked, "priority": pr})
+    check("nearest first, so the photo you clicked starts ahead of the rest", asked[:1] == ["07"] and dist == sorted(dist), asked)
     pg.wait_for_timeout(1200)
     po = pg.evaluate("""() => { const st = document.getElementById('postStack');
       const b = st.children[6].getBoundingClientRect();
