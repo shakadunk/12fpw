@@ -281,6 +281,35 @@ with sync_playwright() as pw:
     check("the oldest week has no <", pg.evaluate(ST)["prev"] == "hidden" and pg.evaluate(ST)["next"] == "visible")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(1400)
 
+    # ---------------- a two-finger swipe on a trackpad (desktop) ----------------
+    pg.locator('.fg-cell img[data-k="2024-5"][data-n="4"]').click(); pg.wait_for_timeout(1500)
+    pg.mouse.move(720, 450)
+    PS = """() => { const v = document.getElementById('postView');
+      return {open: v.classList.contains('open'), t: v.style.transform, scrim: +getComputedStyle(document.getElementById('postScrim')).opacity,
+              top: Math.round(v.scrollTop), hash: location.hash}; }"""
+    for _ in range(5): pg.mouse.wheel(-20, 0)
+    tp = pg.evaluate(PS)
+    check("desktop: two fingers swiped right move the week with them", tp["t"] == "translateX(100px)" and tp["open"], tp)
+    check("desktop: while the blurred grid starts to show through", tp["scrim"] < 0.99, tp)
+    pg.wait_for_timeout(700)
+    tp = pg.evaluate(PS)
+    check("desktop: a short swipe settles back into the week", tp["t"] == "" and tp["open"] and tp["scrim"] == 1, tp)
+    top0 = tp["top"]
+    for _ in range(4): pg.mouse.wheel(0, 120)
+    pg.wait_for_timeout(300)
+    tp = pg.evaluate(PS)
+    check("desktop: scrolling up and down is left alone", tp["top"] > top0 and tp["t"] == "", tp)
+    pg.evaluate("""() => { window.__fly = []; new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+      if (n.classList && n.classList.contains('post-fly')) window.__fly.push(Math.round(n.getBoundingClientRect().left)); })))
+      .observe(document.body, {childList: true, subtree: true}); }""")
+    for _ in range(14): pg.mouse.wheel(-40, 0)
+    for _ in range(6): pg.mouse.wheel(-30, 0)   # the rest of the same gesture, and its momentum
+    pg.wait_for_timeout(1200)
+    tp = pg.evaluate(PS)
+    fl = pg.evaluate("() => window.__fly")
+    check("desktop: a long swipe sends the photo home, from where the swipe left it", not tp["open"] and len(fl) == 1 and fl[0] > 400, {"state": tp, "flight starts at x": fl})
+    check("desktop: and the rest of the gesture does not carry on into the browser's own back", tp["hash"] == "" and pg.url.endswith("/v5/"), pg.url)
+
     # ---------------- a shared link, and the Back button ----------------
     pg.goto(B + "/v5/#2024-w3-i8", wait_until="load")
     pg.wait_for_timeout(1500)

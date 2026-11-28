@@ -760,6 +760,54 @@
     settleSwipe();
   });
 
+  // ---------- the same swipe on a Mac trackpad ----------
+  // Two fingers swiped right inside a week is Safari's (and Chrome's) own "back": it slides in a picture of
+  // the grid taken when the week opened, and the flight home then played late behind it. Safari lets a page
+  // take the gesture over by cancelling its wheel events, so inside an open week this does what the phone's
+  // edge swipe does: the week follows the fingers with the blurred grid showing through, a long swipe or a
+  // flick sends the photo home exactly as Back does, and a short slow one settles back. The answer to the
+  // first event has to be immediate (Safari waits about 50ms before going ahead on its own), so nothing
+  // heavy happens before preventDefault. Up-and-down scrolling is left alone.
+  var pan = null, panIdle = 0;
+  function panSpeed(p) {   // px per ms over the last 100ms of the swipe, momentum included
+    var now = Date.now();
+    while (p.trail.length > 2 && now - p.trail[0][0] > 100) p.trail.shift();
+    var a = p.trail[0], b = p.trail[p.trail.length - 1];
+    return b[0] > a[0] ? (b[1] - a[1]) / (b[0] - a[0]) : 0;
+  }
+  window.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) return;   // a pinch, not a swipe
+    if (pan && pan.left) {   // the week is already on its way home: swallow the rest of this gesture
+      e.preventDefault();
+      clearTimeout(panIdle);
+      panIdle = setTimeout(function () { pan = null; }, 250);
+      return;
+    }
+    if (!pan) {
+      if (!weekShown() || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;   // not a sideways start: scroll as usual
+      pan = { dx: 0, trail: [], left: false, quiet: false };
+    }
+    e.preventDefault();
+    if (!pan.quiet) { pan.quiet = true; quietWeek(); }
+    pan.dx = Math.max(0, pan.dx - e.deltaX * (e.deltaMode === 1 ? 16 : 1));   // fingers to the right: deltaX < 0
+    pan.trail.push([Date.now(), pan.dx]);
+    postView.style.transition = 'none';
+    postView.style.transform = 'translateX(' + pan.dx + 'px)';
+    revealGrid(pan.dx);
+    if (pan.dx > window.innerWidth * 0.3 || (pan.dx > 60 && panSpeed(pan) > 0.6)) {
+      pan.left = true;
+      postView.style.transition = '';
+      releaseGrid();
+      leavePost();
+    }
+    clearTimeout(panIdle);
+    panIdle = setTimeout(function () {   // the fingers (and any momentum) have stopped short of leaving
+      var p = pan;
+      pan = null;
+      if (p && !p.left) settleSwipe();
+    }, 260);
+  }, { passive: false });
+
   // ---------- scroll-up bar ----------
   // The header scrolls away with the page, so the controls come back as a thin bar whenever you head
   // back up. Scrolling down does not hide it at once: it lingers, and resting the mouse on it holds it.
