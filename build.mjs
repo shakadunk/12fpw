@@ -409,6 +409,22 @@ ${posts.filter((p) => p.year === y).map(week).join('\n')}
     </div>
   </section>`;
 
+  // The page lands on the whole archive, so the left corner is a YEAR menu rather than a row of years:
+  // ALL, then the years oldest to newest, made from the posts themselves, so a new year appears on its
+  // own once it has a post. The same menu is in the header and in the scroll-up bar.
+  const yearPick = `  <div class="year-pick">
+    <button type="button" class="year-btn" aria-haspopup="true" aria-expanded="false">YEAR</button>
+    <div class="years" hidden>
+      <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
+${[...years].sort().map((y) => `      <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
+    </div>
+  </div>`;
+
+  // Light and dark as two small drawn icons: the sun (a circle with rays) where the button would switch
+  // to light, the moon (just a circle) where it would switch to dark. Both are in the page and the theme
+  // shows the right one, so it is right from the first paint.
+  const themeToggle = `<button type="button" class="theme-toggle" aria-label="Switch theme"><svg class="ic-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.2v1.9M8 12.9v1.9M1.2 8h1.9M12.9 8h1.9M3.2 3.2l1.35 1.35M11.45 11.45l1.35 1.35M3.2 12.8l1.35-1.35M11.45 4.55l1.35-1.35"/></svg><svg class="ic-moon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5"/></svg></button>`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -429,22 +445,16 @@ d.dataset.theme=(t==='light'||t==='dark')?t:sys;})();
 <body>
 
 <header class="site-head">
-  <button type="button" class="theme-toggle">LIGHT</button>
+${yearPick}
   <span class="site-name"><span class="long">${esc(cfg.name)}</span><span class="short">${esc(cfg.short || cfg.name)}</span></span>
-  <div class="years">
-    <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
-${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
-  </div>
+  ${themeToggle}
 </header>
 
 <!-- Appears on the way back up, hides on the way down; TOP glides to the start. -->
 <div class="slimbar" id="slimbar">
-  <button type="button" class="theme-toggle">LIGHT</button>
+${yearPick}
   <button type="button" class="slim-top" id="slimTop">TOP</button>
-  <div class="years">
-    <button type="button" class="active" data-filter="all" aria-pressed="true">ALL</button>
-${years.map((y) => `    <button type="button" data-filter="${y}" aria-pressed="false">${y}</button>`).join('\n')}
-  </div>
+  ${themeToggle}
 </div>
 
 <main class="fullgrid" id="archive">
@@ -457,7 +467,11 @@ ${years.map(yearBlock).join('\n')}
 <div class="post-view" id="postView" role="dialog" aria-label="Week" aria-hidden="true" tabindex="-1">
   <button type="button" class="post-back" id="postBack">&larr; ARCHIVE</button>
   <div class="col">
-    <h1 class="post-head" id="postHead"></h1>
+    <div class="post-head">
+      <button type="button" class="post-step" id="postPrev" aria-label="Previous week">&lt;</button>
+      <h1 class="post-title" id="postHead"></h1>
+      <button type="button" class="post-step" id="postNext" aria-label="Next week">&gt;</button>
+    </div>
     <div class="post-text" id="postText" hidden></div>
     <div class="post-stack" id="postStack"></div>
   </div>

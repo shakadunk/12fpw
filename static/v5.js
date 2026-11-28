@@ -47,8 +47,7 @@
 
   function paintTheme() {
     var dark = html.getAttribute('data-theme') !== 'light';
-    toggles.forEach(function (t) {
-      t.textContent = dark ? 'LIGHT' : 'DARK';
+    toggles.forEach(function (t) {   // the icon itself follows the theme in CSS
       t.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
     });
     var meta = document.querySelector('meta[name="theme-color"]');
@@ -79,7 +78,36 @@
   }
 
   // ---------- year filter ----------
-  // The same years appear twice (header and scroll-up bar), so a click marks both copies.
+  // YEAR in the left corner opens a short menu: ALL, then each year. The menu appears twice (header and
+  // scroll-up bar), so a choice marks both copies, and the label shows the year being shown (YEAR for all).
+  var picks = [].slice.call(document.querySelectorAll('.year-pick'));
+  function closeYears(except) {
+    picks.forEach(function (p) {
+      if (p === except) return;
+      p.querySelector('.years').hidden = true;
+      p.querySelector('.year-btn').setAttribute('aria-expanded', 'false');
+    });
+  }
+  picks.forEach(function (p) {
+    var btn = p.querySelector('.year-btn'), menu = p.querySelector('.years');
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = menu.hidden;
+      closeYears(p);
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      yearsOpenedAt = window.pageYOffset;
+    });
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('.year-pick')) closeYears(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeYears(); });
+  // Scrolling away closes it, but only a real scroll: a page still settling (an iPhone's momentum, or the
+  // browser bringing the button into view) must not shut the menu the moment it opens.
+  var yearsOpenedAt = 0;
+  window.addEventListener('scroll', function () {
+    if (Math.abs(window.pageYOffset - yearsOpenedAt) > 60) closeYears();
+  }, { passive: true });
+
   [].forEach.call(document.querySelectorAll('.years button'), function (b) {
     b.addEventListener('click', function () {
       var f = b.dataset.filter;
@@ -88,6 +116,10 @@
         x.classList.toggle('active', on);
         x.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
+      [].forEach.call(document.querySelectorAll('.year-btn'), function (x) {
+        x.textContent = f === 'all' ? 'YEAR' : f;
+      });
+      closeYears();
       // Whole sections, so a hidden year takes its sticky label with it
       [].forEach.call(document.querySelectorAll('.fg-year'), function (s) {
         s.style.display = (f === 'all' || s.dataset.year === f) ? '' : 'none';
@@ -308,6 +340,78 @@
   window.addEventListener('gesturestart', function () { syncGridForZoom(true); });
   window.addEventListener('gestureend', function () { syncGridForZoom(false); });
 
+  // ---------- the weeks either side ----------
+  // < and > at the ends of the week's title move to the week before or after it, in the whole archive
+  // whatever year is showing. The week changes in place and opens at its top. It replaces the address
+  // rather than adding to the history, so Back (or a swipe) still goes straight home to the grid, landing
+  // the photo you are on in its own week's row.
+  var weekKeys = [].map.call(document.querySelectorAll('.fg-label'), function (b) { return b.dataset.k; });   // newest first
+  var postPrev = document.getElementById('postPrev'), postNext = document.getElementById('postNext');
+  function neighbour(key, dir) {   // dir -1: the week before (older), +1: the week after (newer)
+    var i = weekKeys.indexOf(key);
+    return i < 0 ? null : weekKeys[i - dir] || null;
+  }
+  function updateSteps(key) {
+    postPrev.hidden = !neighbour(key, -1);
+    postNext.hidden = !neighbour(key, 1);
+  }
+  function stepWeek(dir) {
+    if (!postView.classList.contains('shown') || postView.classList.contains('leaving')) return;
+    var k = neighbour(currentPostKey, dir);
+    if (!k) return;
+    var parts = k.split('-'), hash = '#' + parts[0] + '-w' + parts[1];
+    history.replaceState(history.state, '', hash);
+    currentKey = hash;
+    var wipe = reduceMotion.matches ? null : coverWeek();
+    showPost(parts[0], parts[1], 0);
+    if (wipe) wipeWeek(wipe, dir);
+  }
+
+  // A copy of the week as it is on screen, laid over it on the page's colour, so the real column can take
+  // the next week straight away underneath. One at a time: a second step finishes the first at once.
+  var wipeEl = null, wipeTimer = 0;
+  function endWipe() {
+    clearTimeout(wipeTimer);
+    if (wipeEl) { wipeEl.remove(); wipeEl = null; }
+    var col = postView.querySelector('.col');
+    col.classList.remove('arriving');
+    col.style.transform = col.style.opacity = '';
+  }
+  function coverWeek() {
+    endWipe();
+    var col = postView.querySelector('.col'), top = col.getBoundingClientRect().top;
+    var copy = col.cloneNode(true);
+    [].forEach.call(copy.querySelectorAll('[id]'), function (n) { n.removeAttribute('id'); });
+    copy.style.top = top + 'px';
+    var w = document.createElement('div');
+    w.className = 'week-wipe';
+    w.setAttribute('aria-hidden', 'true');
+    w.appendChild(copy);
+    postView.appendChild(w);
+    return w;
+  }
+  // > : the week you were on goes off to the left and the next comes from the right; < : the other way.
+  function wipeWeek(w, dir) {
+    var col = postView.querySelector('.col'), away = dir > 0 ? -1 : 1;
+    wipeEl = w;
+    col.style.transform = 'translateX(' + (-away * 8) + 'vw)';
+    col.style.opacity = '0.4';
+    void col.offsetWidth;   // start from there
+    requestAnimationFrame(function () {
+      col.classList.add('arriving');
+      col.style.transform = '';
+      col.style.opacity = '';
+      w.style.transform = 'translateX(' + (away * 100) + 'vw)';
+    });
+    wipeTimer = setTimeout(endWipe, 560);
+  }
+  postPrev.addEventListener('click', function () { stepWeek(-1); });
+  postNext.addEventListener('click', function () { stepWeek(1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') stepWeek(-1);
+    else if (e.key === 'ArrowRight') stepWeek(1);
+  });
+
   function showPost(year, week, imageNum) {
     var fly = pendingFly;
     pendingFly = null;
@@ -315,6 +419,7 @@
     var post = data[key];
     if (!post) return false;
 
+    updateSteps(key);
     postHead.textContent = 'Week ' + (+week) + ' ';
     var yr = document.createElement('span');
     yr.className = 'post-year';
@@ -427,6 +532,7 @@
   }
 
   function closePostView() {
+    endWipe();
     quietWeek();
     if (postView.classList.contains('leaving')) return;   // already flying home; a second call would cancel it
     if (!postView.classList.contains('open')) {

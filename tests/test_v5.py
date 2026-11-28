@@ -240,6 +240,45 @@ with sync_playwright() as pw:
       shown: !document.getElementById('postText').hidden})""")
     check("the week number opens the week at the top", wk["hash"] == "#2024-w5" and wk["top"] == 0, wk)
     check("with the writing on screen", wk["shown"] and 0 < wk["textTop"] < 900, wk)
+
+    # ---------------- < and > for the weeks either side ----------------
+    ST = """() => { const h = document.getElementById('postHead').getBoundingClientRect(),
+      p = document.getElementById('postPrev'), n = document.getElementById('postNext'),
+      col = document.querySelector('.post-view .col'), cs = getComputedStyle(col),
+      inner = {l: col.getBoundingClientRect().left + parseFloat(cs.paddingLeft), r: col.getBoundingClientRect().right - parseFloat(cs.paddingRight)},
+      pr = p.getBoundingClientRect(), nr = n.getBoundingClientRect();
+      return {hash: location.hash, head: document.getElementById('postHead').innerText.replace(/\\s+/g, ' ').trim(),
+              prev: getComputedStyle(p).visibility, next: getComputedStyle(n).visibility, top: Math.round(document.getElementById('postView').scrollTop),
+              len: history.length, line: Math.abs((pr.top + pr.height / 2) - (h.top + h.height / 2)) < 4 && Math.abs((nr.top + nr.height / 2) - (h.top + h.height / 2)) < 4,
+              ends: Math.abs(pr.left + 10 - inner.l) < 3 && Math.abs(nr.right - 10 - inner.r) < 3}; }"""
+    s0 = pg.evaluate(ST)
+    check("the week's title has < and > in line with it, at the two ends of the text column", s0["line"] and s0["ends"], s0)
+    pg.click("#postPrev"); pg.wait_for_timeout(500)
+    s1 = pg.evaluate(ST)
+    check("< opens the week before, from its top", s1["hash"] == "#2024-w4" and s1["head"].upper() == "WEEK 4 2024" and s1["top"] == 0, s1)
+    check("in place, without adding to the history", s1["len"] == s0["len"], (s0["len"], s1["len"]))
+    pg.click("#postNext"); pg.wait_for_timeout(300); pg.click("#postNext"); pg.wait_for_timeout(500)
+    check("> opens the week after", pg.evaluate(ST)["hash"] == "#2024-w6")
+    pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(400)
+    check("the arrow keys do the same", pg.evaluate(ST)["hash"] == "#2024-w5")
+    pg.wait_for_timeout(300)
+    wp = pg.evaluate("""() => new Promise(res => { document.getElementById('postNext').click();
+      setTimeout(() => { const w = document.querySelector('.week-wipe'), c = document.querySelector('.post-view .col');
+        res({w: w ? new DOMMatrix(getComputedStyle(w).transform).m41 : null, c: new DOMMatrix(getComputedStyle(c).transform).m41,
+             ids: document.querySelectorAll('#postHead').length, curve: w && getComputedStyle(w).transitionTimingFunction}); }, 200); })""")
+    check("> wipes the week off to the left as the next one comes in from the right",
+          wp["w"] is not None and wp["w"] < -50 and wp["c"] > 0 and wp["ids"] == 1, wp)
+    check("on the zoom's own curve", wp["curve"] == "cubic-bezier(0.4, 0, 0.2, 1)", wp)
+    pg.wait_for_timeout(500)
+    check("and clears away once it has gone", pg.evaluate("() => !document.querySelector('.week-wipe') && document.querySelector('.post-view .col').style.transform === ''"))
+    pg.click("#postPrev"); pg.wait_for_timeout(700)
+    pg.evaluate("() => { history.replaceState(null, '', '#2024-w1'); dispatchEvent(new HashChangeEvent('hashchange')); }"); pg.wait_for_timeout(500)
+    pg.click("#postPrev"); pg.wait_for_timeout(500)
+    check("< crosses from the first week of a year into the last of the year before", pg.evaluate(ST)["hash"] == "#2023-w52")
+    pg.evaluate("() => { history.replaceState(null, '', '#2024-w9'); dispatchEvent(new HashChangeEvent('hashchange')); }"); pg.wait_for_timeout(500)
+    check("the newest week has no >", pg.evaluate(ST)["next"] == "hidden" and pg.evaluate(ST)["prev"] == "visible")
+    pg.evaluate("() => { history.replaceState(null, '', '#2023-w1'); dispatchEvent(new HashChangeEvent('hashchange')); }"); pg.wait_for_timeout(500)
+    check("the oldest week has no <", pg.evaluate(ST)["prev"] == "hidden" and pg.evaluate(ST)["next"] == "visible")
     pg.keyboard.press("Escape"); pg.wait_for_timeout(1400)
 
     # ---------------- a shared link, and the Back button ----------------
@@ -263,9 +302,28 @@ with sync_playwright() as pw:
               thumbShown: getComputedStyle(t).visibility === 'visible'}; }""")
     check("the browser Back button also closes and flies home", not bk["open"] and bk["thumbShown"], bk)
 
-    # ---------------- year filter and theme ----------------
+    # ---------------- header: YEAR menu at the left, the theme icon at the right ----------------
+    hd = pg.evaluate("""() => { const h = document.querySelector('.site-head').getBoundingClientRect();
+      const y = document.querySelector('.site-head .year-btn').getBoundingClientRect();
+      const t = document.querySelector('.site-head .theme-toggle').getBoundingClientRect();
+      const menu = document.querySelector('.site-head .years');
+      return {yearLeft: y.left - h.left, toggleRight: h.right - t.right, label: document.querySelector('.site-head .year-btn').textContent,
+              closed: menu.hidden, items: [...menu.querySelectorAll('button')].map(b => b.textContent)}; }""")
+    check("YEAR sits in the left corner, the theme toggle in the right", hd["yearLeft"] <= 41 and hd["toggleRight"] <= 41, hd)
+    check("the menu starts closed and lists ALL, then each year oldest first",
+          hd["label"] == "YEAR" and hd["closed"] and hd["items"] == ["ALL"] + [str(y) for y in sorted(years)], hd)
+    pg.locator('.site-head .year-btn').click(); pg.wait_for_timeout(150)
+    check("YEAR opens it", pg.evaluate("() => !document.querySelector('.site-head .years').hidden"))
+    pg.mouse.wheel(0, 30); pg.wait_for_timeout(150)
+    check("a nudge of the page leaves it open", pg.evaluate("() => !document.querySelector('.site-head .years').hidden"))
+    pg.click(".site-head .site-name"); pg.wait_for_timeout(150)
+    check("a click anywhere else closes it", pg.evaluate("() => document.querySelector('.site-head .years').hidden"))
+    pg.locator('.site-head .year-btn').click(); pg.wait_for_timeout(150)
     pg.locator('.site-head .years button[data-filter="2024"]').click()
     pg.wait_for_timeout(300)
+    check("choosing a year closes the menu and names the year in both copies",
+          pg.evaluate("() => [...document.querySelectorAll('.year-btn')].map(b => b.textContent)") == ["2024", "2024"]
+          and pg.evaluate("() => document.querySelector('.site-head .years').hidden"))
     # Whole sections are hidden, so offsetParent rather than the week's own display tells you what is left
     yf = pg.evaluate("""() => {
       const shown = [...document.querySelectorAll('.fg-week')].filter(w => w.offsetParent !== null);
@@ -275,8 +333,10 @@ with sync_playwright() as pw:
     check("the year filter shows only that year", yf["years"] == ["2024"], yf)
     check("and the hidden year takes its sticky label with it", yf["stickies"] <= 1, yf)
     check("and both copies of the years are marked", yf["marked"], yf)
+    pg.locator('.site-head .year-btn').click(); pg.wait_for_timeout(150)
     pg.locator('.site-head .years button[data-filter="all"]').click()
     pg.wait_for_timeout(300)
+    check("ALL brings them back, and the label back to YEAR", pg.evaluate("() => document.querySelector('.year-btn').textContent") == "YEAR")
     check("ALL brings them back", pg.evaluate("() => [...document.querySelectorAll('.fg-week')].filter(w => getComputedStyle(w).display !== 'none').length") == N)
 
     was = pg.evaluate("() => document.documentElement.dataset.theme")
@@ -284,11 +344,12 @@ with sync_playwright() as pw:
     pg.wait_for_timeout(250)
     other = "dark" if was == "light" else "light"
     th2 = pg.evaluate("""() => ({theme: document.documentElement.dataset.theme,
-      both: [...document.querySelectorAll('.theme-toggle')].map(t => t.textContent.trim()),
+      both: [...document.querySelectorAll('.theme-toggle')].map(t => [...t.querySelectorAll('svg')].filter(i => getComputedStyle(i).display !== 'none').map(i => i.getAttribute('class')).join()),
       saved: localStorage.getItem('theme')})""")
     check("the theme toggle switches and is remembered", th2["theme"] == other and th2["saved"] == other, (was, th2))
     check("and both copies say the same thing", len(set(th2["both"])) == 1, th2["both"])
-    check("the toggle now offers the one you came from", th2["both"][0] == was.upper(), (was, th2["both"]))
+    check("the toggle now shows the one you came from: the sun for light, the moon (a plain circle) for dark",
+          th2["both"][0] == {"light": "ic-sun", "dark": "ic-moon"}[was], (was, th2["both"]))
     pg.locator(".site-head .theme-toggle").click(); pg.wait_for_timeout(200)
     check("switching back to the device's own mode stops saving a choice",
           pg.evaluate("() => localStorage.getItem('theme')") is None)
@@ -479,6 +540,7 @@ with sync_playwright() as pw:
     touch("touchStart", 6, 420); touch("touchMove", 30, 421); touch("touchMove", 60, 422); ph.wait_for_timeout(50)
     during = ph.evaluate(HELD)
     check("phone: dragging a week away pauses its photos still on their way in", before["loading"] > 3 and during["held"] >= 3, {"before": before, "during": during})
+    ph.wait_for_timeout(300)   # hold still before letting go, so it is a short slow drag, never a flick
     touch("touchEnd"); ph.wait_for_timeout(400)
     after = ph.evaluate(HELD)
     check("phone: and settling back into the week resumes them", after["held"] == 0 and after["loading"] >= during["held"], after)

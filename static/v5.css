@@ -47,13 +47,13 @@ body {
   text-transform: uppercase;
 }
 .site-head { padding: var(--pad); }
-.site-head .theme-toggle { grid-column: 1; justify-self: start; }
+.site-head .year-pick, .slimbar .year-pick { grid-column: 1; justify-self: start; }
 .site-head .site-name { grid-column: 2; justify-self: center; }
-.site-head .years { grid-column: 3; justify-self: end; }
+.site-head .theme-toggle, .slimbar .theme-toggle { grid-column: 3; justify-self: end; }
 .site-name { color: var(--fg); white-space: nowrap; }
 .site-name .short { display: none; }
 
-.theme-toggle, .slim-top, .years button, .fg-label, .post-back {
+.theme-toggle, .slim-top, .year-btn, .years button, .fg-label, .post-back, .post-step {
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
@@ -64,9 +64,48 @@ body {
   color: var(--mute);
   transition: color .15s;
 }
-.theme-toggle:hover, .slim-top:hover, .years button:hover, .post-back:hover { color: var(--fg); }
-.years { display: flex; gap: 1.1rem; }
+.theme-toggle:hover, .slim-top:hover, .year-btn:hover, .years button:hover, .post-back:hover, .post-step:hover { color: var(--fg); }
 .years button.active { color: var(--fg); }
+
+/* Light/dark: the sun where it switches to light, the moon where it switches to dark. Line icons in the
+   same grey as the words around them, sized to the 12px capitals. */
+.theme-toggle { display: inline-flex; align-self: center; padding: 6px; margin: -6px; }
+.theme-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; }
+[data-theme="dark"] .theme-toggle .ic-moon,
+[data-theme="light"] .theme-toggle .ic-sun { display: none; }
+
+/* YEAR menu: the years stacked under the label on a small frosted patch, the same blur and tint as the
+   scroll-up bar, feathered on every edge so it has no box. The label shows the year being shown. */
+.year-pick { position: relative; }
+.year-btn[aria-expanded="true"] { color: var(--fg); }
+.year-pick .years {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 130;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 4.5rem;
+}
+.year-pick .years[hidden] { display: none; }
+.year-pick .years button { padding: 7px 0; }
+.year-pick .years::before {
+  content: "";
+  position: absolute;
+  inset: -18px -28px -26px -28px;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--bar-tint);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 26px), transparent 100%),
+    linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 26px), transparent 100%),
+    linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  mask-composite: intersect;
+}
 
 /* === SCROLL-UP BAR (V2) === */
 .slimbar {
@@ -105,9 +144,7 @@ body {
     rgba(0,0,0,.86) calc(100% - 29px), rgba(0,0,0,.62) calc(100% - 21px),
     rgba(0,0,0,.36) calc(100% - 13px), rgba(0,0,0,.14) calc(100% - 6px), transparent 100%);
 }
-.slimbar .theme-toggle { grid-column: 1; justify-self: start; }
 .slimbar .slim-top { grid-column: 2; justify-self: center; }
-.slimbar .years { grid-column: 3; justify-self: end; }
 
 /* === ARCHIVE GRID (V2's measurements) === */
 /* V2 is 3 across on a phone and 12 across — one whole week to a row — on a desktop, with the week
@@ -231,15 +268,35 @@ body {
 /* V2's reading column. The tail is just a margin after the last photo, not half a screen of nothing:
    the week ends where the photos end. */
 .col { max-width: 680px; margin: 0 auto; padding: 96px 20px 72px; }
+/* The week's title, with < and > at the two ends of the text column for the weeks either side. */
 .post-head {
-  text-align: center;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
   font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--fg);
   margin-bottom: 28px;
 }
+.post-title { font: inherit; text-align: center; margin: 0; }
 .post-head .post-year { color: var(--mute); }
+.post-step { padding: 8px 10px; margin: -8px -10px; font-size: 13px; }
+.post-step[hidden] { display: block; visibility: hidden; }
+/* Moving to the week either side: the week you are on wipes off to the side, on the page's own colour so
+   it covers the next one as it goes, and the next week eases in a short way from the same side underneath
+   it. Same curve as the zoom. */
+.week-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  background: var(--bg);
+  pointer-events: none;
+  transition: transform .5s var(--ease-open);
+}
+.week-wipe .col { position: absolute; left: 0; right: 0; }
+.col.arriving { transition: transform .5s var(--ease-open), opacity .5s var(--ease-open); }
 .post-text {
   margin: 28px 0 40px;
   font-size: 15px;
@@ -306,7 +363,6 @@ body {
   .site-name .long { display: none; }
   .site-name .short { display: inline; }
   .site-head { padding: 14px var(--pad); }
-  .years { gap: .9rem; }
   .col { padding: 56px 14px 48px; }
   .post-stack { gap: 14px; }
   .post-back { top: 10px; left: 8px; padding: 10px 14px 10px 10px; }   /* a thumb-sized target */
