@@ -341,10 +341,14 @@ with sync_playwright() as pw:
 
     was = pg.evaluate("() => document.documentElement.dataset.theme")
     pg.locator(".site-head .theme-toggle").click()
-    pg.wait_for_timeout(250)
-    mid = pg.evaluate("() => +parseFloat(getComputedStyle(document.querySelector('.site-head .ic-ray')).strokeDashoffset)")
+    pg.wait_for_timeout(200)
+    fade = pg.evaluate("""() => ({on: document.documentElement.classList.contains('theme-fading'), t: getComputedStyle(document.body).transition,
+      ray: +parseFloat(getComputedStyle(document.querySelector('.site-head .ic-ray')).strokeDashoffset)})""")
+    mid = fade["ray"]
+    check("the page's colours fade at the icon's pace rather than flip", fade["on"] and "background-color 0.55s" in fade["t"], fade)
     check("the icon changes over, not in one jump (rays growing out or drawing in)", 0.05 < mid < 2.35, mid)
     pg.wait_for_timeout(500)
+    check("and the fade switches itself off afterwards", pg.evaluate("() => !document.documentElement.classList.contains('theme-fading')"))
     other = "dark" if was == "light" else "light"
     th2 = pg.evaluate("""() => ({theme: document.documentElement.dataset.theme,
       both: [...document.querySelectorAll('.theme-toggle')].map(t => +getComputedStyle(t.querySelector('.ic-ray')).strokeDashoffset.replace('px', '') > 2.3 ? 'ic-moon' : 'ic-sun'),

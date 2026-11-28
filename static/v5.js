@@ -55,10 +55,23 @@
   }
   paintTheme();
 
+  // Changing theme crossfades the whole page (background, words, the bar's tint) at the pace of the icon's
+  // own change, instead of flipping in one frame. The fade is only switched on for the change itself, so it
+  // never slows anything else down.
+  var fadeTimer = 0;
+  function setTheme(next) {
+    if (!reduceMotion.matches) {
+      html.classList.add('theme-fading');
+      clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(function () { html.classList.remove('theme-fading'); }, 650);
+    }
+    html.setAttribute('data-theme', next);
+  }
+
   toggles.forEach(function (t) {
     t.addEventListener('click', function () {
       var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
+      setTheme(next);
       try {
         if (next === systemTheme()) localStorage.removeItem('theme');
         else localStorage.setItem('theme', next);
@@ -70,7 +83,7 @@
   if (mqLight) {
     var onSystem = function () {
       if (savedTheme()) return;
-      html.setAttribute('data-theme', systemTheme());
+      setTheme(systemTheme());
       paintTheme();
     };
     if (mqLight.addEventListener) mqLight.addEventListener('change', onSystem);

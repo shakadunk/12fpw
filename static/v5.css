@@ -88,6 +88,15 @@ body {
 [data-theme="light"] .theme-toggle .ic-disc { transform: scale(1); transition-delay: .1s; }   /* rays draw in first */
 [data-theme="light"] .theme-toggle .ic-ray { stroke-dashoffset: 2.4; transition-delay: 0s; }
 
+/* While the theme changes, everything's colours fade at the icon's pace (0.55s, the icon's 0.45s plus its
+   stagger) on the same curve. The icon keeps its own motion. */
+.theme-fading,
+.theme-fading *:not(.ic-disc):not(.ic-ray),
+.theme-fading *::before,
+.theme-fading *::after {
+  transition: background-color .55s var(--ease-open), color .55s var(--ease-open), border-color .55s var(--ease-open) !important;
+}
+
 /* YEAR menu: the years stacked under the label on a small frosted patch, the same blur and tint as the
    scroll-up bar, feathered on every edge so it has no box. The label shows the year being shown. */
 .year-pick { position: relative; }
