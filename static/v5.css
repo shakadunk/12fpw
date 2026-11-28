@@ -88,7 +88,16 @@ body {
 [data-theme="light"] .theme-toggle .ic-disc { transform: scale(1); transition-delay: .1s; }   /* rays draw in first */
 [data-theme="light"] .theme-toggle .ic-ray { stroke-dashoffset: 2.4; transition-delay: 0s; }
 
-/* While the theme changes, everything's colours fade at the icon's pace (0.55s, the icon's 0.45s plus its
+/* Changing theme: the browser crossfades a picture of the page before and after, at the icon's pace
+   (0.55s, the icon's 0.45s plus its stagger) on the same curve. The icon itself, live in the new picture,
+   keeps its own motion. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: .55s;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Fallback for browsers without view transitions: everything's colours fade at the icon's pace (0.55s, the icon's 0.45s plus its
    stagger) on the same curve. The icon keeps its own motion. */
 .theme-fading,
 .theme-fading *:not(.ic-disc):not(.ic-ray),

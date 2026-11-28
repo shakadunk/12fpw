@@ -58,13 +58,20 @@
   // Changing theme crossfades the whole page (background, words, the bar's tint) at the pace of the icon's
   // own change, instead of flipping in one frame. The fade is only switched on for the change itself, so it
   // never slows anything else down.
+  // Where the browser can, it takes a picture of the page before and after and crossfades the two on the
+  // graphics chip (a view transition), so nothing is redrawn while it fades. Fading every element's colours
+  // instead meant redrawing the whole page, every thumbnail included, on every frame, which stuttered. That
+  // remains only as the fallback for browsers without view transitions.
   var fadeTimer = 0;
   function setTheme(next) {
-    if (!reduceMotion.matches) {
-      html.classList.add('theme-fading');
-      clearTimeout(fadeTimer);
-      fadeTimer = setTimeout(function () { html.classList.remove('theme-fading'); }, 650);
+    if (reduceMotion.matches) { html.setAttribute('data-theme', next); return; }
+    if (document.startViewTransition && !window.__noViewTransition) {
+      document.startViewTransition(function () { html.setAttribute('data-theme', next); paintTheme(); });
+      return;
     }
+    html.classList.add('theme-fading');
+    clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(function () { html.classList.remove('theme-fading'); }, 650);
     html.setAttribute('data-theme', next);
   }
 

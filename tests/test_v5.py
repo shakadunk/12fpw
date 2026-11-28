@@ -340,15 +340,25 @@ with sync_playwright() as pw:
     check("ALL brings them back", pg.evaluate("() => [...document.querySelectorAll('.fg-week')].filter(w => getComputedStyle(w).display !== 'none').length") == N)
 
     was = pg.evaluate("() => document.documentElement.dataset.theme")
+    pg.evaluate("""() => { window.__vt = 0; const vt = document.startViewTransition.bind(document);
+      document.startViewTransition = (cb) => { window.__vt++; return vt(cb); }; }""")
     pg.locator(".site-head .theme-toggle").click()
     pg.wait_for_timeout(200)
-    fade = pg.evaluate("""() => ({on: document.documentElement.classList.contains('theme-fading'), t: getComputedStyle(document.body).transition,
+    fade = pg.evaluate("""() => ({vt: window.__vt,
       ray: +parseFloat(getComputedStyle(document.querySelector('.site-head .ic-ray')).strokeDashoffset)})""")
     mid = fade["ray"]
-    check("the page's colours fade at the icon's pace rather than flip", fade["on"] and "background-color 0.55s" in fade["t"], fade)
-    check("the icon changes over, not in one jump (rays growing out or drawing in)", 0.05 < mid < 2.35, mid)
+    check("the page crossfades to the other theme as one picture, drawn by the browser rather than repainted", fade["vt"] == 1, fade)
+    check("the icon changes over, not in one jump (rays growing out or drawing in)", 0.02 < mid < 2.395, mid)
     pg.wait_for_timeout(500)
-    check("and the fade switches itself off afterwards", pg.evaluate("() => !document.documentElement.classList.contains('theme-fading')"))
+    # browsers without view transitions fade the colours instead, switched on for the change only
+    pg.evaluate("() => { window.__noViewTransition = true; document.querySelector('.site-head .theme-toggle').click(); }")
+    pg.wait_for_timeout(100)
+    fb = pg.evaluate("() => ({on: document.documentElement.classList.contains('theme-fading'), t: getComputedStyle(document.body).transition})")
+    check("without view transitions it falls back to fading the colours", fb["on"] and "background-color 0.55s" in fb["t"], fb)
+    pg.wait_for_timeout(800)
+    check("and that fade switches itself off afterwards", pg.evaluate("() => !document.documentElement.classList.contains('theme-fading')"))
+    pg.evaluate("() => { document.querySelector('.site-head .theme-toggle').click(); window.__noViewTransition = false; }")
+    pg.wait_for_timeout(800)
     other = "dark" if was == "light" else "light"
     th2 = pg.evaluate("""() => ({theme: document.documentElement.dataset.theme,
       both: [...document.querySelectorAll('.theme-toggle')].map(t => +getComputedStyle(t.querySelector('.ic-ray')).strokeDashoffset.replace('px', '') > 2.3 ? 'ic-moon' : 'ic-sun'),
