@@ -342,9 +342,12 @@ with sync_playwright() as pw:
     was = pg.evaluate("() => document.documentElement.dataset.theme")
     pg.locator(".site-head .theme-toggle").click()
     pg.wait_for_timeout(250)
+    mid = pg.evaluate("() => +parseFloat(getComputedStyle(document.querySelector('.site-head .ic-ray')).strokeDashoffset)")
+    check("the icon changes over, not in one jump (rays growing out or drawing in)", 0.05 < mid < 2.35, mid)
+    pg.wait_for_timeout(500)
     other = "dark" if was == "light" else "light"
     th2 = pg.evaluate("""() => ({theme: document.documentElement.dataset.theme,
-      both: [...document.querySelectorAll('.theme-toggle')].map(t => [...t.querySelectorAll('svg')].filter(i => getComputedStyle(i).display !== 'none').map(i => i.getAttribute('class')).join()),
+      both: [...document.querySelectorAll('.theme-toggle')].map(t => +getComputedStyle(t.querySelector('.ic-ray')).strokeDashoffset.replace('px', '') > 2.3 ? 'ic-moon' : 'ic-sun'),
       saved: localStorage.getItem('theme')})""")
     check("the theme toggle switches and is remembered", th2["theme"] == other and th2["saved"] == other, (was, th2))
     check("and both copies say the same thing", len(set(th2["both"])) == 1, th2["both"])

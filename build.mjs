@@ -420,10 +420,12 @@ ${[...years].sort().map((y) => `      <button type="button" data-filter="${y}" a
     </div>
   </div>`;
 
-  // Light and dark as two small drawn icons: the sun (a circle with rays) where the button would switch
-  // to light, the moon (just a circle) where it would switch to dark. Both are in the page and the theme
-  // shows the right one, so it is right from the first paint.
-  const themeToggle = `<button type="button" class="theme-toggle" aria-label="Switch theme"><svg class="ic-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1.2v1.9M8 12.9v1.9M1.2 8h1.9M12.9 8h1.9M3.2 3.2l1.35 1.35M11.45 11.45l1.35 1.35M3.2 12.8l1.35-1.35M11.45 4.55l1.35-1.35"/></svg><svg class="ic-moon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5"/></svg></button>`;
+  // Light and dark as one small drawn icon that changes between them: the sun (a small circle with eight
+  // rays) where the button would switch to light, the moon (just a larger circle) where it would switch to
+  // dark. Each ray is drawn from its inner end outward, so switching to dark grows the rays out from the
+  // circle, and switching to light draws them back in from their tips to nothing (see v5.css). The theme
+  // is set before the first paint, so the icon arrives in the right state without animating.
+  const themeToggle = `<button type="button" class="theme-toggle" aria-label="Switch theme"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle class="ic-disc" cx="8" cy="8" r="5"/><line class="ic-ray" x1="12.40" y1="8.00" x2="14.60" y2="8.00"/><line class="ic-ray" x1="11.11" y1="11.11" x2="12.67" y2="12.67"/><line class="ic-ray" x1="8.00" y1="12.40" x2="8.00" y2="14.60"/><line class="ic-ray" x1="4.89" y1="11.11" x2="3.33" y2="12.67"/><line class="ic-ray" x1="3.60" y1="8.00" x2="1.40" y2="8.00"/><line class="ic-ray" x1="4.89" y1="4.89" x2="3.33" y2="3.33"/><line class="ic-ray" x1="8.00" y1="3.60" x2="8.00" y2="1.40"/><line class="ic-ray" x1="11.11" y1="4.89" x2="12.67" y2="3.33"/></svg></button>`;
 
   return `<!doctype html>
 <html lang="en">
